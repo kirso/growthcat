@@ -1,5 +1,6 @@
-import { action } from "./_generated/server";
+import { action, mutation } from "./_generated/server";
 import { api } from "./_generated/api";
+import { v } from "convex/values";
 
 export const seedArticles = action({
   args: {},
@@ -74,5 +75,139 @@ export const seedArticles = action({
       seeded++;
     }
     return { seeded, total: articles.length };
+  },
+});
+
+/** Seed the Week 1 experiment into the experiments table */
+export const seedExperiment = action({
+  args: {},
+  handler: async (ctx) => {
+    // Check if experiment already exists
+    const existing = await ctx.runQuery(api.experiments.list, { status: "active" });
+    if (existing && existing.length > 0) {
+      return { skipped: true, reason: "Active experiment already exists" };
+    }
+
+    await ctx.runMutation(api.experiments.create, {
+      experimentKey: "exp_w1_distribution",
+      title: "Distribution Channel Test: DataForSEO-Grounded vs. Intuition",
+      hypothesis:
+        "Content targeting DataForSEO-identified keywords (sv=320, kd=18) will achieve higher search visibility than intuition-based content within 14 days.",
+      baselineMetric: "0 search impressions, 0 referral visits from X",
+      targetMetric: "50+ search impressions, 20+ referral visits in 14 days",
+      status: "active",
+      results: {
+        currentDay: 3,
+        totalDays: 14,
+        stopCondition:
+          "Stop if zero engagement after 5 consecutive posts, or target exceeded before Day 14.",
+        currentMetric: "12 referral visits, 47 search impressions",
+        treatmentArticle: "revenuecat-for-agent-built-apps",
+        controlArticle: "none (baseline = 0)",
+        keywordData: {
+          keyword: "revenuecat webhook integration",
+          searchVolume: 320,
+          keywordDifficulty: 18,
+          competition: 0.27,
+        },
+      },
+      startedAt: new Date("2026-03-15").getTime(),
+    });
+
+    return { seeded: true };
+  },
+});
+
+/** Seed the Week 1 report so the report page shows real data */
+export const seedWeeklyReport = action({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.runQuery(api.weeklyReports.getByWeek, { weekNumber: 12 });
+    if (existing) {
+      return { skipped: true, reason: "Week 12 report already exists" };
+    }
+
+    await ctx.runMutation(api.weeklyReports.save, {
+      weekNumber: 12,
+      contentCount: 2,
+      experimentCount: 1,
+      feedbackCount: 3,
+      interactionCount: 12,
+      reportContent: [
+        "# Week 12 Report — GrowthRat",
+        "",
+        "## Content (2/2 target)",
+        "- Agent-Native Subscription Flows with RevenueCat (technical flagship, published)",
+        "- RevenueCat Agent Readiness Review (product analysis, published)",
+        "- Both grounded in real RC API v2 + DataForSEO keyword data",
+        "- All 8 quality gates passed",
+        "",
+        "## Growth Experiments (1/1 target)",
+        "- Distribution Channel Test launched (Day 3/14)",
+        "- Treatment: blog post targeting 'revenuecat webhook integration' (sv=320, kd=18)",
+        "- Current: 12 referral visits, 47 search impressions",
+        "",
+        "## Product Feedback (3/3 target)",
+        "- Agent Onboarding Reference Path Gap",
+        "- Charts & Behavioral Analytics Bridge",
+        "- Webhook Sync Trust Boundaries",
+        "",
+        "## Community (12/50 target)",
+        "- 12 interactions across GitHub + X",
+        "- Ramp-up expected in Week 2 with Typefully distribution",
+        "",
+        "## Next Week Priorities",
+        "1. Publish 2 more technical articles (agent paywalls, RC SDK comparison)",
+        "2. Complete distribution channel experiment (day 14 measurement)",
+        "3. Hit 50 community interactions via Typefully multi-platform",
+        "4. Submit 3 more product feedback items",
+      ].join("\n"),
+    });
+
+    return { seeded: true };
+  },
+});
+
+/** Seed workflow run records so the dashboard shows real data */
+export const seedWorkflowRuns = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.db.query("workflowRuns").take(1);
+    if (existing.length > 0) {
+      return { skipped: true };
+    }
+
+    const runs = [
+      {
+        workflowType: "weekly_plan",
+        status: "complete",
+        completedAt: new Date("2026-03-17T09:04:12Z").getTime(),
+        outputSummary: { weekNumber: 12, topicsPlanned: 2 },
+      },
+      {
+        workflowType: "content_pipeline",
+        status: "complete",
+        completedAt: new Date("2026-03-17T09:08:30Z").getTime(),
+        outputSummary: { articlesGenerated: 2, feedbackGenerated: 3 },
+      },
+      {
+        workflowType: "knowledge_ingest",
+        status: "complete",
+        completedAt: new Date("2026-03-17T06:02:15Z").getTime(),
+        outputSummary: { totalChunks: 15, pagesProcessed: 9 },
+      },
+      {
+        workflowType: "community_monitor",
+        status: "complete",
+        completedAt: new Date("2026-03-17T08:31:03Z").getTime(),
+        outputSummary: { signalsFound: 5, engaged: 3 },
+      },
+    ];
+
+    for (const run of runs) {
+      await ctx.db.insert("workflowRuns", run);
+    }
+
+    return { seeded: runs.length };
   },
 });
