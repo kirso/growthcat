@@ -89,8 +89,11 @@ export default function PipelinePage() {
     { limit: 10 }
   );
 
-  // Map Convex artifacts to the UI shape, or fall back to sample data
-  const slots: ContentSlot[] = convexArtifacts
+  // Map Convex artifacts to the UI shape, or fall back to sample data.
+  // Use sample data as the default immediately so there is no flash of
+  // empty state while the Convex hook resolves (it returns undefined
+  // during SSR and on first client render when Convex is not connected).
+  const slots: ContentSlot[] = convexArtifacts && convexArtifacts.length > 0
     ? convexArtifacts.map((a: any) => ({
         id: a.slug ?? a._id,
         title: a.title,
@@ -105,8 +108,9 @@ export default function PipelinePage() {
       }))
     : SAMPLE_SLOTS;
 
-  // Map Convex opportunities to the UI shape, or fall back to sample data
-  const opportunities: Opportunity[] = convexOpportunities
+  // Map Convex opportunities to the UI shape, or fall back to sample data.
+  // Same pattern: sample data is the default so the layout never flashes.
+  const opportunities: Opportunity[] = convexOpportunities && convexOpportunities.length > 0
     ? convexOpportunities.map((o: any) => ({
         score: o.score,
         title: o.title,

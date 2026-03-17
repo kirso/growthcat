@@ -1,18 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
+/*
+ * GrowthCat Design System
+ * Based on RevenueCat's brand: Object Sans-inspired headings, clean minimalism,
+ * coral/blue accent palette, sophisticated card shadows.
+ *
+ * RC brand colors extracted from revenuecat.com:
+ * - Primary Red: #F25A5A
+ * - Primary Blue: #5C70D6
+ * - Dark Navy: #1F1F47
+ * - Success Green: #11D483
+ * - Text: #171A1C
+ * - Border: #E3E6E8
+ * - Surface: #EDF0F2
+ *
+ * GrowthCat uses a slightly shifted coral (#E85D4A) for its own identity
+ * while staying visually compatible with RevenueCat's brand.
+ */
+
 @theme {
-  /* RevenueCat-inspired palette */
+  /* ── Public theme (RevenueCat-inspired light) ── */
   --color-gc-primary: #E85D4A;
   --color-gc-primary-hover: #D14A38;
   --color-gc-accent: #5C70D6;
-  --color-rc-dark: #171A1C;
-  --color-rc-text: #2D3338;
+  --color-gc-accent-hover: #4A5EC4;
+  --color-gc-green: #11D483;
+  --color-rc-dark: #1F1F47;
+  --color-rc-text: #171A1C;
+  --color-rc-body: #2D3338;
   --color-rc-muted: #6B7280;
-  --color-rc-border: #E5E7EB;
-  --color-rc-surface: #F9FAFB;
+  --color-rc-light: #9CA3AF;
+  --color-rc-border: #E3E6E8;
+  --color-rc-surface: #EDF0F2;
+  --color-rc-bg: #FAFBFC;
+  --color-rc-white: #FFFFFF;
 
-  /* Operator console dark theme */
+  /* ── Operator theme (dark, for screen-sharing) ── */
   --color-op-bg: #0f1117;
   --color-op-card: #1a1f2e;
   --color-op-card-alt: #242938;
@@ -25,44 +49,312 @@
   --color-op-blue: #3b82f6;
   --color-op-amber: #f59e0b;
 
-  /* Typography */
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* ── Typography ── */
+  --font-sans: "Inter", "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
 
-  /* Layout */
-  --max-w-content: 48rem;
-  --max-w-wide: 72rem;
+  /* ── Layout (matching RC's container widths) ── */
+  --max-w-content: 48rem;   /* 768px — prose/article width */
+  --max-w-wide: 76rem;      /* 1216px — RC's desktop container */
+  --max-w-full: 90rem;      /* 1440px — full bleed */
 
-  /* Shadows */
-  --shadow-card: 0 2px 6px rgba(23,26,28,0.08), 0 5px 15px rgba(23,26,28,0.12);
-  --shadow-card-hover: 0 4px 12px rgba(23,26,28,0.12), 0 8px 24px rgba(23,26,28,0.16);
+  /* ── Shadows (RC-style layered) ── */
+  --shadow-card: 0 2px 6px rgba(23, 26, 28, 0.08), 0 5px 15px rgba(23, 26, 28, 0.12);
+  --shadow-card-hover: 0 4px 12px rgba(23, 26, 28, 0.12), 0 8px 24px rgba(23, 26, 28, 0.16);
+  --shadow-sm: 0 1px 3px rgba(23, 26, 28, 0.06), 0 1px 2px rgba(23, 26, 28, 0.04);
+
+  /* ── Radius (consistent with RC) ── */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
 }
 
-html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+/* ── Base resets ── */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-/* Prose styling for article markdown */
-.prose h1 { font-weight: 700; font-size: 2.5rem; line-height: 1.15; color: var(--color-rc-dark); margin-bottom: 1.5rem; letter-spacing: -0.02em; }
-.prose h2 { font-weight: 600; font-size: 1.75rem; line-height: 1.25; color: var(--color-rc-dark); margin-top: 3rem; margin-bottom: 1rem; }
-.prose h3 { font-weight: 600; font-size: 1.25rem; color: var(--color-rc-dark); margin-top: 2rem; margin-bottom: 0.75rem; }
-.prose p { margin-bottom: 1.25rem; }
-.prose a { color: var(--color-gc-primary); text-decoration: underline; text-underline-offset: 2px; }
-.prose a:hover { color: var(--color-gc-accent); }
-.prose ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 1.25rem; }
-.prose ul li { margin-bottom: 0.5rem; }
-.prose ul li::marker { color: var(--color-gc-primary); }
-.prose ol { list-style: decimal; padding-left: 1.5rem; margin-bottom: 1.25rem; }
-.prose ol li { margin-bottom: 0.5rem; }
-.prose ol li::marker { color: var(--color-gc-primary); font-weight: 600; }
-.prose code { font-family: var(--font-mono); font-size: 0.875em; background: var(--color-rc-surface); padding: 0.15em 0.4em; border-radius: 0.25rem; }
-.prose pre { font-family: var(--font-mono); font-size: 0.875rem; background: var(--color-rc-dark); color: #e5e7eb; padding: 1.25rem 1.5rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1.5rem; }
-.prose pre code { background: none; padding: 0; color: inherit; }
-.prose blockquote { border-left: 3px solid var(--color-gc-primary); padding-left: 1.25rem; color: var(--color-rc-muted); font-style: italic; margin: 1.5rem 0; }
-.prose strong { font-weight: 600; color: var(--color-rc-dark); }
-.prose hr { border: none; border-top: 1px solid var(--color-rc-border); margin: 2.5rem 0; }
-.prose table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.9375rem; }
-.prose th { text-align: left; font-weight: 600; padding: 0.75rem 1rem; border-bottom: 2px solid var(--color-rc-border); }
-.prose td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--color-rc-border); }
+body {
+  font-family: var(--font-sans);
+  color: var(--color-rc-body);
+  line-height: 1.7;
+}
+
+/* ── Prose styling (for article markdown content) ── */
+.prose {
+  max-width: var(--max-w-content);
+}
+
+.prose h1 {
+  font-weight: 700;
+  font-size: 2.5rem;
+  line-height: 1.15;
+  color: var(--color-rc-dark);
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.025em;
+}
+
+.prose h2 {
+  font-weight: 600;
+  font-size: 1.75rem;
+  line-height: 1.25;
+  color: var(--color-rc-dark);
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.015em;
+}
+
+.prose h3 {
+  font-weight: 600;
+  font-size: 1.25rem;
+  color: var(--color-rc-dark);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose p {
+  margin-bottom: 1.25rem;
+  color: var(--color-rc-body);
+}
+
+.prose a {
+  color: var(--color-gc-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+
+.prose a:hover {
+  color: var(--color-gc-accent);
+}
+
+.prose ul {
+  list-style: none;
+  padding-left: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.prose ul li {
+  position: relative;
+  padding-left: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose ul li::before {
+  content: "";
+  position: absolute;
+  left: -1.25rem;
+  top: 0.65em;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-gc-primary);
+}
+
+.prose ol {
+  list-style: none;
+  padding-left: 1.5rem;
+  counter-reset: item;
+  margin-bottom: 1.25rem;
+}
+
+.prose ol li {
+  counter-increment: item;
+  position: relative;
+  padding-left: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose ol li::before {
+  content: counter(item) ".";
+  position: absolute;
+  left: -1.5rem;
+  font-weight: 600;
+  color: var(--color-gc-primary);
+}
+
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--color-rc-surface);
+  padding: 0.15em 0.4em;
+  border-radius: var(--radius-sm);
+  color: var(--color-rc-dark);
+}
+
+.prose pre {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  background: var(--color-rc-dark);
+  color: #e5e7eb;
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.prose pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--color-gc-primary);
+  padding-left: 1.25rem;
+  color: var(--color-rc-muted);
+  font-style: italic;
+  margin: 1.5rem 0;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: var(--color-rc-dark);
+}
+
+.prose hr {
+  border: none;
+  border-top: 1px solid var(--color-rc-border);
+  margin: 2.5rem 0;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.9375rem;
+}
+
+.prose th {
+  text-align: left;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid var(--color-rc-border);
+  color: var(--color-rc-dark);
+}
+
+.prose td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-rc-border);
+}
+
+.prose tr:nth-child(even) {
+  background: var(--color-rc-surface);
+}
+
+/* ── Component patterns ── */
+
+/* RC-style pill badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+/* RC-style card */
+.card {
+  background: var(--color-rc-white);
+  border: 1px solid var(--color-rc-border);
+  border-radius: var(--radius-lg);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-card);
+}
+
+/* RC-style button (primary) */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-gc-primary);
+  color: white;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  transition: background 0.2s;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background: var(--color-gc-primary-hover);
+}
+
+/* RC-style button (secondary/outline) */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-rc-white);
+  color: var(--color-rc-dark);
+  font-weight: 600;
+  border: 1px solid var(--color-rc-border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s;
+  text-decoration: none;
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-rc-muted);
+}
+
+/* RC-style ghost link */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  color: var(--color-rc-muted);
+  font-weight: 500;
+  transition: color 0.2s;
+  text-decoration: none;
+}
+
+.btn-ghost:hover {
+  color: var(--color-rc-dark);
+}
+
+/* ── Operator console (dark theme overrides) ── */
 
 /* Cursor blink for panel streaming */
-@keyframes cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-.cursor-blink { animation: cursor-blink 1s step-end infinite; }
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+/* Operator card */
+.op-card {
+  background: var(--color-op-card);
+  border: 1px solid var(--color-op-border);
+  border-radius: var(--radius-lg);
+}
+
+/* Status dot */
+.status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot-green { background: var(--color-op-green); }
+.status-dot-red { background: var(--color-op-red); }
+.status-dot-amber { background: var(--color-op-amber); }
+.status-dot-blue { background: var(--color-op-blue); }

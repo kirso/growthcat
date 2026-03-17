@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const navItems = [
+  { href: "/onboarding", label: "Onboarding", icon: "🚀" },
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/panel", label: "Panel Console", icon: "🎙️" },
   { href: "/pipeline", label: "Content Pipeline", icon: "📝" },
@@ -12,7 +13,6 @@ const navItems = [
   { href: "/experiments", label: "Experiments", icon: "🧪" },
   { href: "/feedback", label: "Feedback", icon: "💬" },
   { href: "/report", label: "Weekly Report", icon: "📈" },
-  { href: "/onboarding", label: "Onboarding", icon: "🔗" },
 ];
 
 export default function OperatorLayout({

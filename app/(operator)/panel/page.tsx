@@ -80,30 +80,29 @@ export default function PanelPage() {
       );
       eventSourceRef.current = es;
 
-      es.addEventListener("prompt_received", (e) => {
+      es.addEventListener("progress", (e) => {
         const data = JSON.parse(e.data);
-        setModel(data.model || "");
-        setPhase("retrieving");
+        if (data.step === "prompt_received") {
+          setPhase("retrieving");
+        } else if (data.step === "sources_retrieved") {
+          setSources(data.sources?.map((s: { label: string; type: string }) => ({
+            label: s.label,
+            type: s.type === "public_product" ? "doc" : s.type === "market_intelligence" ? "api" : s.type === "internal_config" ? "code" : "web",
+          })) ?? []);
+          setPhase("generating");
+        } else if (data.step === "reasoning") {
+          // Could show reasoning text
+        }
       });
 
-      es.addEventListener("sources_retrieved", (e) => {
+      es.addEventListener("stream", (e) => {
         const data = JSON.parse(e.data);
-        setSources(data.sources || []);
-        setPhase("generating");
+        if (data.token) {
+          setOutput((prev) => prev + data.token);
+        }
       });
 
-      es.addEventListener("reasoning", (e) => {
-        const data = JSON.parse(e.data);
-        // Could display reasoning separately; for now just note phase
-        void data;
-      });
-
-      es.addEventListener("output_chunk", (e) => {
-        const data = JSON.parse(e.data);
-        setOutput((prev) => prev + (data.text || ""));
-      });
-
-      es.addEventListener("complete", () => {
+      es.addEventListener("done", () => {
         setPhase("complete");
         stopTimer();
         es.close();
@@ -111,6 +110,7 @@ export default function PanelPage() {
 
       es.onerror = () => {
         setPhase("complete");
+        setOutput((prev) => prev ? prev + "\n\n[Connection error]" : "[Connection error]");
         stopTimer();
         es.close();
       };
