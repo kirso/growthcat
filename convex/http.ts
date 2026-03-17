@@ -116,6 +116,21 @@ http.route({
   }),
 });
 
+// Store a source chunk with embedding (knowledge ingestion)
+http.route({
+  path: "/api/sources",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if (!verifyInternalAuth(request)) return unauthorizedResponse();
+    const body = await request.json();
+    const id = await ctx.runMutation(api.sources.upsertWithEmbedding, body);
+    return new Response(JSON.stringify({ id }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }),
+});
+
 // ---------------------------------------------------------------------------
 // GET endpoints — read-only, still require auth to prevent data leaks
 // ---------------------------------------------------------------------------

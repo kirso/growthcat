@@ -35,6 +35,40 @@ export const upsert = mutation({
   },
 });
 
+// VS-A1: Upsert a source chunk WITH embedding (for knowledge ingestion)
+export const upsertWithEmbedding = mutation({
+  args: {
+    key: v.string(),
+    url: v.optional(v.string()),
+    provider: v.string(),
+    sourceClass: v.string(),
+    evidenceTier: v.string(),
+    lastRefreshed: v.number(),
+    contentHash: v.string(),
+    summary: v.optional(v.string()),
+    embedding: v.optional(v.array(v.float64())),
+    chunkIndex: v.optional(v.number()),
+    parentKey: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("sources")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .first();
+
+    if (existing) {
+      // Skip if content hasn't changed
+      if (existing.contentHash === args.contentHash) {
+        return existing._id;
+      }
+      await ctx.db.patch(existing._id, args);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("sources", args);
+  },
+});
+
 // Internal mutation triggered by the daily source freshness cron job
 export const auditFreshness = internalMutation({
   args: {},

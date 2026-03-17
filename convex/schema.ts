@@ -101,5 +101,36 @@ export default defineSchema({
     lastRefreshed: v.number(),
     contentHash: v.string(),
     summary: v.optional(v.string()),
-  }).index("by_provider", ["provider"]),
+    // VS-A1: embedding for vector search (RAG over custom knowledge)
+    embedding: v.optional(v.array(v.float64())),
+    // VS-A1: chunk metadata
+    chunkIndex: v.optional(v.number()),
+    parentKey: v.optional(v.string()),
+  })
+    .index("by_provider", ["provider"])
+    .index("by_key", ["key"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["provider", "evidenceTier"],
+    }),
+
+  // VS-B5: Non-secret agent configuration (set during onboarding)
+  agentConfig: defineTable({
+    reviewMode: v.string(), // "draft_only" | "semi_auto" | "bounded_autonomy"
+    focusTopics: v.array(v.string()),
+    slackChannel: v.string(),
+    githubOrg: v.optional(v.string()),
+    enabledPlatforms: v.array(v.string()),
+    paused: v.boolean(),
+  }),
+
+  // VS-B1: Approval tracking
+  approvalLog: defineTable({
+    artifactId: v.id("artifacts"),
+    action: v.string(), // "approved" | "rejected" | "override"
+    by: v.string(), // "slack_reaction" | "quality_gates_auto" | "operator"
+    reason: v.optional(v.string()),
+    slackThreadTs: v.optional(v.string()),
+  }).index("by_artifact", ["artifactId"]),
 });
