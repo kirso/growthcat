@@ -165,6 +165,20 @@ A briefing pack presenting business value, safety model, autonomy boundaries, an
 - Least-privilege scope for all connected assets.
 - Revoke works without redeploy.
 
+### Ownership model
+
+**Operator provides and pays for** (covered by RC's "dedicated budget for compute resources and API access"):
+- Anthropic API (LLM), DataForSEO (keyword intelligence), Convex (database), Inngest (orchestration), Vercel (hosting), Typefully (social distribution), GrowthCat X/GitHub accounts, domain
+
+**RevenueCat connects via self-service onboarding** (zero cost to them):
+- Slack workspace (add GrowthCat bot via OAuth)
+- Blog CMS (API key entered in onboarding page)
+- Charts API (API key, if REST access available)
+- GitHub org (add GrowthCat as collaborator)
+- Preferences (report channel, review mode, focus topics)
+
+RevenueCat's credentials are stored server-side in Convex. The operator never sees them.
+
 ### AEO requirements (Answer Engine Optimization)
 
 - Every content piece must open with a direct, extractable answer in the first 2 sentences

@@ -27,6 +27,21 @@ GrowthCat has a conversational interface available on every public page. Revenue
 3. **Panel Interview**: Operator shares screen showing `/panel` → panel gives prompts → GrowthCat streams responses with source retrieval
 4. **Founder Interview**: Operator presents briefing pack + demonstrates the operating product
 
+### Ownership Model
+
+**Operator pays for** (from RC's compute budget):
+- Anthropic API (~$50-100/mo), DataForSEO (~$50/mo), Convex (free tier), Inngest (free tier), Vercel (free tier), Typefully ($0-12/mo), GrowthCat social accounts (free), domain (~$12/yr)
+- Total: ~$100-150/month
+
+**RevenueCat connects via `/onboarding`** (zero cost):
+- Slack workspace → OAuth button
+- Blog CMS → API key input (stored in Convex, never seen by operator)
+- Charts API → API key input
+- GitHub org → collaborator invite
+- Preferences → report channel, review mode (draft-only vs auto-publish), focus topics
+
+Implementation: `app/(operator)/onboarding/page.tsx` — 4-step wizard. RC's credentials stored in Convex via `convex/http.ts` authenticated endpoints.
+
 ## Architecture
 
 ```
