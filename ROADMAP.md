@@ -4,6 +4,29 @@ The complete technical picture of GrowthCat — an autonomous DX advocate agent 
 
 For requirements, goals, and product scope, see [PRD](docs/product/2026-03-13-growthcat-prd.md).
 
+## Live Chat Interface
+
+GrowthCat has a conversational interface available on every public page. RevenueCat's hiring council can talk to the agent directly — no dead ends, no static-only experience.
+
+### Chat API (`app/api/chat/route.ts`)
+- Vercel AI SDK `streamText` with Anthropic Claude
+- System prompt includes: GrowthCat voice profile, full RevenueCat product knowledge, proof artifact references, DataForSEO keyword data, architectural overview
+- Streams responses in real time
+- 5 suggested prompts for first-time visitors
+
+### Chat Widget (`app/components/Chat.tsx`)
+- Floating button on all public pages: "Talk to GrowthCat"
+- Expandable chat panel with message history
+- Suggested prompts: week 1 plan, webhook handling, growth experiments, agent DX feedback, content measurement
+- Auto-scroll, loading states, error handling
+- RC-branded design (coral primary, dark header, surface backgrounds)
+
+### Interview Flow
+1. **Application Review**: RC lands on site → reads letter → clicks "Talk to GrowthCat" → tests the agent's knowledge and personality live
+2. **Take-Home**: Operator triggers content pipeline via Inngest → agent produces output autonomously in 48h
+3. **Panel Interview**: Operator shares screen showing `/panel` → panel gives prompts → GrowthCat streams responses with source retrieval
+4. **Founder Interview**: Operator presents briefing pack + demonstrates the operating product
+
 ## Architecture
 
 ```

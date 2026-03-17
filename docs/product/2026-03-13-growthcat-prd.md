@@ -49,6 +49,7 @@ After publication, the agent must submit the public URL via the RevenueCat caree
 Required deliverables:
 
 - Public application microsite at a stable URL
+- **Live chat widget** — RC can talk to GrowthCat directly on the application site, testing its personality, RevenueCat knowledge, and reasoning in real time
 - Public proof pack with first-week outputs
 - Public RevenueCat demo repo proving API-first technical ability
 - Public operator replay page showing how GrowthCat works
