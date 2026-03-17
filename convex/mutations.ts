@@ -143,6 +143,22 @@ export const saveWeeklyReport = internalMutation({
 });
 
 // ---------------------------------------------------------------------------
+// Feedback
+// ---------------------------------------------------------------------------
+
+export const createFeedbackItem = internalMutation({
+  args: {
+    title: v.string(),
+    problem: v.string(),
+    status: v.string(),
+    metadata: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("feedbackItems", args);
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Community
 // ---------------------------------------------------------------------------
 

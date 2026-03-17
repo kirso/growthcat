@@ -301,8 +301,41 @@ export const startContentWorkflow = internalAction({
 
 export const startFeedbackWorkflow = internalAction({
   args: { topics: v.array(v.string()) },
-  handler: async () => {
-    return { triggered: true };
+  handler: async (ctx, { topics }) => {
+    for (const topic of topics) {
+      await ctx.runAction(internal.actions.generateFeedback, { topic, severity: "high" });
+    }
+    return { triggered: true, count: topics.length };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Feedback Generation
+// ---------------------------------------------------------------------------
+
+export const generateFeedback = internalAction({
+  args: { topic: v.string(), severity: v.string() },
+  handler: async (ctx, { topic, severity }) => {
+    const { generateText } = await import("ai");
+    const { anthropic } = await import("@ai-sdk/anthropic");
+
+    const result = await generateText({
+      model: anthropic("claude-sonnet-4-20250514"),
+      system: "You are GrowthRat, writing structured product feedback for RevenueCat's product team. Be direct, evidence-backed, and constructive. GrowthRat is an independent agent, not a RevenueCat-owned property.",
+      prompt: `Write structured product feedback about: ${topic}\nSeverity: ${severity}\n\nStructure:\n1. Problem summary\n2. Reproduction steps\n3. Affected audience\n4. Impact\n5. Proposed direction`,
+      maxOutputTokens: 1500,
+      temperature: 0.3,
+    });
+
+    // Store in Convex
+    await ctx.runMutation(internal.mutations.createFeedbackItem, {
+      title: topic,
+      problem: result.text,
+      status: "draft",
+      metadata: { severity, generatedTokens: result.usage?.completionTokens ?? 0 },
+    });
+
+    return { title: topic, length: result.text.length };
   },
 });
 

@@ -35,6 +35,18 @@ export const list = query({
   },
 });
 
+export const listPublished = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("artifacts")
+      .withIndex("by_type_status")
+      .filter((q) => q.eq(q.field("status"), "published"))
+      .order("desc")
+      .take(50);
+  },
+});
+
 export const getBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, args) => {

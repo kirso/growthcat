@@ -1,12 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 
 export const metadata: Metadata = {
   title: "Articles",
   description: "All published content from GrowthRat.",
 };
 
-const articles = [
+interface ArticleItem {
+  slug: string;
+  title: string;
+  description?: string;
+  category?: string;
+  artifactType?: string;
+  pubDate?: string;
+  publishedAt?: number;
+  content?: string;
+}
+
+const HARDCODED_ARTICLES: ArticleItem[] = [
   {
     slug: "week-one-async-report",
     title: "Week One Async Check-In Report",
@@ -74,7 +87,37 @@ function formatDate(dateStr: string) {
   });
 }
 
-export default function ArticlesPage() {
+function formatTimestamp(ts: number) {
+  const d = new Date(ts);
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export default async function ArticlesPage() {
+  // Try to fetch published artifacts from Convex; fall back to hardcoded array
+  let articles: ArticleItem[] = HARDCODED_ARTICLES;
+
+  try {
+    const convexArticles = await fetchQuery(api.artifacts.listPublished, {}).catch(
+      () => null
+    );
+    if (convexArticles && convexArticles.length > 0) {
+      articles = convexArticles.map((a) => ({
+        slug: a.slug,
+        title: a.title,
+        description: a.content?.slice(0, 180) + "...",
+        category: a.artifactType,
+        artifactType: a.artifactType,
+        publishedAt: a.publishedAt,
+      }));
+    }
+  } catch {
+    // Convex not available or types not generated — use hardcoded fallback
+  }
+
   return (
     <div className="max-w-[var(--max-w-wide)] mx-auto px-6 py-16">
       <h1 className="font-bold text-4xl text-[var(--color-rc-dark)] tracking-tight mb-4">
@@ -85,35 +128,51 @@ export default function ArticlesPage() {
       </p>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {articles.map((article) => (
-          <Link
-            key={article.slug}
-            href={`/articles/${article.slug}`}
-            className="group block bg-white rounded-xl border border-[var(--color-rc-border)] overflow-hidden hover:shadow-[var(--shadow-card)] transition-all duration-200 no-underline"
-          >
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-3">
-                <span
-                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${categoryColors[article.category] ?? "bg-gray-100 text-gray-700"}`}
-                >
-                  {article.category}
-                </span>
-                <time
-                  className="text-xs text-[var(--color-rc-muted)]"
-                  dateTime={article.pubDate}
-                >
-                  {formatDate(article.pubDate)}
-                </time>
+        {articles.map((article) => {
+          const category = article.category ?? article.artifactType ?? "general";
+          const dateDisplay = article.pubDate
+            ? formatDate(article.pubDate)
+            : article.publishedAt
+              ? formatTimestamp(article.publishedAt)
+              : "";
+          const dateTime = article.pubDate
+            ? article.pubDate
+            : article.publishedAt
+              ? new Date(article.publishedAt).toISOString().split("T")[0]
+              : undefined;
+
+          return (
+            <Link
+              key={article.slug}
+              href={`/articles/${article.slug}`}
+              className="group block bg-white rounded-xl border border-[var(--color-rc-border)] overflow-hidden hover:shadow-[var(--shadow-card)] transition-all duration-200 no-underline"
+            >
+              <div className="p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${categoryColors[category] ?? "bg-gray-100 text-gray-700"}`}
+                  >
+                    {category}
+                  </span>
+                  {dateTime && (
+                    <time
+                      className="text-xs text-[var(--color-rc-muted)]"
+                      dateTime={dateTime}
+                    >
+                      {dateDisplay}
+                    </time>
+                  )}
+                </div>
+                <h3 className="font-semibold text-[var(--color-rc-dark)] group-hover:text-[var(--color-gc-primary)] transition-colors mb-2 leading-snug">
+                  {article.title}
+                </h3>
+                <p className="text-sm text-[var(--color-rc-muted)] line-clamp-3">
+                  {article.description}
+                </p>
               </div>
-              <h3 className="font-semibold text-[var(--color-rc-dark)] group-hover:text-[var(--color-gc-primary)] transition-colors mb-2 leading-snug">
-                {article.title}
-              </h3>
-              <p className="text-sm text-[var(--color-rc-muted)] line-clamp-3">
-                {article.description}
-              </p>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
