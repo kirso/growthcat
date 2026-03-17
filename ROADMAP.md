@@ -1,304 +1,295 @@
 # GrowthCat Roadmap
 
-The complete technical picture of GrowthCat — an autonomous DX advocate agent for RevenueCat.
+The complete technical picture of GrowthCat -- an autonomous DX advocate agent for RevenueCat.
 
 For requirements, goals, and product scope, see [PRD](docs/product/2026-03-13-growthcat-prd.md).
 
-## Live Chat Interface
+---
 
-GrowthCat has a conversational interface available on every public page. RevenueCat's hiring council can talk to the agent directly — no dead ends, no static-only experience.
+## Layer 1: The Brain (Convex Agent + RAG)
 
-### Chat API (`app/api/chat/route.ts`)
-- Vercel AI SDK `streamText` with Anthropic Claude
-- System prompt includes: GrowthCat voice profile, full RevenueCat product knowledge, proof artifact references, DataForSEO keyword data, architectural overview
-- Streams responses in real time
-- 5 suggested prompts for first-time visitors
+The brain is the Convex Agent component (`@convex-dev/agent`). Every conversation -- chat widget, panel console, Slack thread, content generation session -- runs through this single brain. The agent has persistent threads, message history, tool calling, and RAG on every response.
 
-### Chat Widget (`app/components/Chat.tsx`)
-- Floating button on all public pages: "Talk to GrowthCat"
-- Expandable chat panel with message history
-- Suggested prompts: week 1 plan, webhook handling, growth experiments, agent DX feedback, content measurement
-- Auto-scroll, loading states, error handling
-- RC-branded design (coral primary, dark header, surface backgrounds)
+### Convex Agent Setup
 
-### Interview Flow
-1. **Application Review**: RC lands on site → reads letter → clicks "Talk to GrowthCat" → tests the agent's knowledge and personality live
-2. **Take-Home**: Operator triggers content pipeline via Inngest → agent produces output autonomously in 48h
-3. **Panel Interview**: Operator shares screen showing `/panel` → panel gives prompts → GrowthCat streams responses with source retrieval
-4. **Founder Interview**: Operator presents briefing pack + demonstrates the operating product
+- Thread management: each conversation gets a persistent thread stored in Convex
+- Message persistence: every user message and agent response is saved
+- Tool calling: the agent can call tools mid-response (search knowledge base, query DataForSEO, fetch articles, check experiment status)
+- Model: Anthropic Claude (claude-sonnet-4-20250514 for throughput, claude-opus-4-20250514 for complex reasoning)
 
-### Ownership Model
+### Knowledge Base
 
-**Operator pays for** (from RC's compute budget):
-- Anthropic API (~$50-100/mo), DataForSEO (~$50/mo), Convex (free tier), Inngest (free tier), Vercel (free tier), Typefully ($0-12/mo), GrowthCat social accounts (free), domain (~$12/yr)
-- Total: ~$100-150/month
+What gets ingested:
 
-**RevenueCat connects via `/onboarding`** (zero cost):
-- Slack workspace → OAuth button
-- Blog CMS → API key input (stored in Convex, never seen by operator)
-- Charts API → API key input
-- GitHub org → collaborator invite
-- Preferences → report channel, review mode (draft-only vs auto-publish), focus topics
+| Source | Type | Refresh |
+| --- | --- | --- |
+| RevenueCat docs (docs.revenuecat.com) | Official documentation | Daily |
+| RevenueCat SDK repos (purchases-ios, android, flutter, react-native, unity) | Code, issues, PRs | Daily |
+| RevenueCat blog | Official content | Daily |
+| RevenueCat changelog | Product releases | Daily |
+| RevenueCat community (GitHub Discussions, Discord) | Community Q&A | Every 6 hours |
+| DataForSEO keyword/SERP data | Market intelligence | Weekly |
+| GrowthCat's own published articles | Self-awareness | On publish |
+| Competitor docs (Adapty, Superwall, Qonversion) | Competitive intelligence | Weekly |
 
-Implementation: `app/(operator)/onboarding/page.tsx` — 4-step wizard. RC's credentials stored in Convex via `convex/http.ts` authenticated endpoints.
+How it's processed:
 
-## Architecture
+1. **Crawl**: fetch source content via HTTP or API
+2. **Chunk**: split into ~500-token chunks with overlap, preserving section boundaries
+3. **Embed**: generate embeddings (1536 dimensions) via OpenAI or Anthropic embedding model
+4. **Store**: write chunks to Convex `sources` table with metadata (provider, evidence tier, content hash, URL, last refreshed timestamp)
+5. **Dedup**: content hash prevents re-embedding unchanged content
 
-```
-Next.js 15 (App Router) — single framework: UI + API routes + SSE streaming + static pages
-├── Inngest + AgentKit — multi-agent orchestration with deterministic routing
-├── Convex — reactive database + cron + file storage + vector search + text search + HTTP actions
-├── Connectors (native fetch)
-│   ├── Typefully — multi-platform social distribution (X, LinkedIn, Threads, Bluesky, Mastodon)
-│   ├── Slack Web API — internal team communication
-│   ├── GitHub REST API — code artifacts, PRs, issues
-│   ├── RevenueCat REST API v2 — product data
-│   └── DataForSEO REST API — market intelligence
-├── Vercel AI SDK — LLM streaming (streamText, generateText, tool definitions)
-├── Tailwind CSS v4 — styling
-└── Single Bun runtime
-```
+### Retrieval
 
-### Why this stack
+Before every response, the agent runs retrieval:
 
-| Concern | Solution |
+1. **Vector search** on `sources` table -- semantic similarity to the user's message
+2. **Text search** on `sources` and `artifacts` tables -- keyword matching
+3. **Cross-thread search** -- find relevant context from past conversations (panel sessions, chat threads, Slack conversations)
+4. **Recency filter** -- boost sources refreshed in the last 7 days, penalize sources older than 30 days
+
+Results are merged, deduplicated, and injected into the system prompt as grounding context.
+
+### Threads
+
+Every interaction type maps to a thread:
+
+| Interaction | Thread type | Persistence |
+| --- | --- | --- |
+| Chat widget on public site | Per-visitor session | Ephemeral (24h) |
+| Panel console | Per-session | Permanent (for replay) |
+| Slack @GrowthCat thread | Per-Slack-thread | Permanent |
+| Content generation | Per-artifact | Permanent |
+| Weekly planning | Per-week | Permanent |
+
+### Agent Tools
+
+Tools the Convex Agent can call during any response:
+
+| Tool | Purpose |
 | --- | --- |
-| Runtimes | 1 (Bun) |
-| Frameworks | 3 (Next.js + Inngest + Convex) |
-| Agent orchestration | Inngest AgentKit with `createNetwork`, `createAgent`, `createTool`, MCP |
-| Database | Convex (schema, queries, mutations, zero migrations) |
-| Real-time dashboard | Convex reactive queries (live updates, no polling) |
-| LLM streaming | Vercel AI SDK `streamText()` with React hooks |
-| File storage | Convex built-in file storage |
-| Cron and scheduling | Convex `cronJobs()` + Inngest scheduled functions |
-| Type safety | End-to-end TypeScript (DB schema to API to UI) |
-| MCP support | AgentKit native `mcpServers` on agents |
-| Deploy complexity | Single Next.js deploy + Convex (managed) + Inngest (managed) |
+| `searchKnowledgeBase` | Vector + text search across ingested sources |
+| `searchDataForSEO` | Live keyword data, SERP snapshots, AI visibility |
+| `getArticle` | Fetch a specific published artifact by slug |
+| `getExperimentStatus` | Current state and results of a running experiment |
+| `getFeedbackItems` | List structured feedback items by status |
+| `getWeeklyMetrics` | Aggregated metrics for the current or specified week |
+| `createDraft` | Create a content draft in Convex (starts the content lifecycle) |
+| `listOpportunities` | Scored opportunity queue for planning |
 
-### Slack Bot (app/api/slack/events/route.ts)
+### How a Response Works (step by step)
 
-- Receives @GrowthCat mentions via Slack Events API
-- HMAC-SHA256 signature verification via SLACK_SIGNING_SECRET
-- Responds within 3s (Slack requirement), processes in background via Inngest
-- Command routing: `focus on [topic]`, `write about [topic]`, `status`, `report`, `stop/pause`, `resume`, `help`
-- General questions answered via Claude LLM
-- Replies posted in the originating thread
-
-### Self-Service Onboarding (app/(operator)/onboarding/page.tsx)
-
-- 4-step onboarding page for RevenueCat to connect services WITHOUT sharing keys with the operator
-- Step 1: Add GrowthCat to Slack (OAuth flow)
-- Step 2: Connect blog CMS (API key input, stored server-side)
-- Step 3: Connect Charts API (API key input)
-- Step 4: Set preferences (report channel, review mode, focus topics)
-- Pattern from Harness Engineering: "agents operate in the same environment humans use, but sandboxed"
-
-### Community Signal Detection (inngest/community-monitor.ts)
-
-- Inngest cron running every 6 hours
-- Scans open issues on RevenueCat/purchases-ios, purchases-android, purchases-flutter
-- Filters for agent-related keywords (agent, programmatic, api, webhook, automated, script)
-- Triggers community engagement function for matching signals (max 5 per scan)
-
-### CMS Publishing (lib/cms/publish.ts)
-
-- Publishes content by committing markdown files with frontmatter to the GitHub repo
-- Handles create and update (checks for existing SHA)
-- Triggers Vercel rebuild on push
-- Designed to switch to RevenueCat's blog CMS post-hire
-
-### Issue Tracker Integration (lib/feedback/file-issue.ts)
-
-- Files structured product feedback as GitHub Issues
-- Structured format: Problem, Severity, Affected Audience, Proposed Direction, Evidence
-- Issues labeled with `feedback` and `severity:{level}`
-- Routes to configurable repo (defaults to main repo, can point to RC's tracker post-hire)
-
-### Convex HTTP Actions (convex/http.ts)
-
-- 7 authenticated HTTP endpoints for Inngest to write to Convex
-- All endpoints require Bearer token auth (GROWTHCAT_INTERNAL_SECRET)
-- Fail-closed: returns 401 if secret is not configured
-- Endpoints: artifacts, feedback, community, reports, opportunities, workflow-runs, metrics
-- Health check endpoint
-
-### Security Model
-
-- Convex HTTP endpoints: Bearer token auth (GROWTHCAT_INTERNAL_SECRET)
-- Panel SSE endpoint: Token auth (GROWTHCAT_PANEL_TOKEN)
-- Slack events: HMAC-SHA256 verification with timing-safe comparison + replay protection (5min window)
-- Inngest: SDK signing verification (INNGEST_SIGNING_KEY in production)
-- Fail-closed: all endpoints reject unauthenticated requests
-- Secrets never committed: .env files gitignored
+1. User sends a message (chat widget, panel prompt, Slack mention)
+2. Message is saved to the thread in Convex
+3. `fetchContextMessages` retrieves recent thread history
+4. RAG runs: vector search + text search + cross-thread search
+5. System prompt is assembled: voice profile + retrieved context + tool definitions
+6. Convex Agent calls the LLM with the full context
+7. If the LLM calls a tool, Convex Agent executes it and feeds the result back
+8. Response streams to the user
+9. Response is persisted to the thread in Convex
 
 ### Convex Schema
 
-```typescript
-// convex/schema.ts
-export default defineSchema({
-  artifacts: defineTable({
-    artifactType: v.string(),  // "blog_post", "tutorial", "feedback_report", etc.
-    title: v.string(),
-    slug: v.string(),
-    content: v.string(),
-    contentFormat: v.string(),  // "markdown", "html"
-    status: v.string(),  // "draft", "validated", "published", "rejected"
-    metadata: v.optional(v.any()),
-    qualityScores: v.optional(v.any()),
-    llmProvider: v.optional(v.string()),
-    llmModel: v.optional(v.string()),
-    inputTokens: v.optional(v.number()),
-    outputTokens: v.optional(v.number()),
-    publishedAt: v.optional(v.number()),
-  })
-    .index("by_type_status", ["artifactType", "status"])
-    .index("by_slug", ["slug"])
-    .searchIndex("search_content", { searchField: "content" }),
+Core tables:
 
-  workflowRuns: defineTable({
-    workflowType: v.string(),
-    status: v.string(),  // "pending", "running", "completed", "failed"
-    inputParams: v.optional(v.any()),
-    outputSummary: v.optional(v.any()),
-    completedAt: v.optional(v.number()),
-    errorMessage: v.optional(v.string()),
-  }).index("by_type_status", ["workflowType", "status"]),
+| Table | Purpose | Key indexes |
+| --- | --- | --- |
+| `artifacts` | All content (blog posts, tutorials, reports, feedback) | by_type_status, by_slug, search_content |
+| `workflowRuns` | Inngest function execution tracking | by_type_status |
+| `experiments` | Growth experiment lifecycle | by_status |
+| `feedbackItems` | Structured product feedback | by_status |
+| `opportunitySnapshots` | Scored growth opportunities | by_lane_score |
+| `communityInteractions` | Community engagement tracking | by_channel, search_content |
+| `weeklyReports` | Aggregated weekly reports | by_week |
+| `sources` | Knowledge base with embeddings | by_embedding (vector, 1536d) |
 
-  experiments: defineTable({
-    experimentKey: v.string(),
-    title: v.string(),
-    hypothesis: v.string(),
-    baselineMetric: v.string(),
-    targetMetric: v.string(),
-    status: v.string(),  // "planned", "running", "completed", "stopped"
-    results: v.optional(v.any()),
-    startedAt: v.optional(v.number()),
-    completedAt: v.optional(v.number()),
-  }).index("by_status", ["status"]),
+Convex queries power the real-time operator dashboard: `getSystemHealth`, `listArtifacts`, `getExperimentStatus`, `getCommunityStats`, `getWeeklyReport`, `getOpportunityQueue`.
 
-  feedbackItems: defineTable({
-    title: v.string(),
-    problem: v.string(),
-    evidence: v.optional(v.string()),
-    proposedFix: v.optional(v.string()),
-    sourceLane: v.optional(v.string()),
-    status: v.string(),  // "draft", "structured", "submitted", "acknowledged"
-    metadata: v.optional(v.any()),
-  }).index("by_status", ["status"]),
+Convex mutations handle all state transitions: `createArtifact`, `updateArtifactStatus`, `publishArtifact`, `logWorkflowRun`, `createExperiment`, `submitFeedback`, `recordInteraction`, `saveWeeklyReport`.
 
-  opportunitySnapshots: defineTable({
-    slug: v.string(),
-    title: v.string(),
-    lane: v.string(),
-    audience: v.optional(v.string()),
-    score: v.number(),
-    components: v.optional(v.any()),
-    rationale: v.optional(v.string()),
-    readinessScore: v.optional(v.number()),
-    readinessPasses: v.boolean(),
-    workflowRunId: v.optional(v.id("workflowRuns")),
-  }).index("by_lane_score", ["lane", "score"]),
+Convex actions handle external API calls: LLM generation, DataForSEO queries, Slack posting, Typefully drafts, GitHub operations, RevenueCat API queries.
 
-  communityInteractions: defineTable({
-    channel: v.string(),  // "x", "github", "discord"
-    interactionType: v.string(),  // "reply", "thread", "comment", "post"
-    content: v.string(),
-    targetUrl: v.optional(v.string()),
-    qualityScore: v.optional(v.number()),
-    meaningful: v.boolean(),
-  })
-    .index("by_channel", ["channel"])
-    .searchIndex("search_content", { searchField: "content" }),
+Convex cron jobs: weekly planning (Monday 9am UTC), daily source freshness audit, connector health check (every 6h), weekly report generation (Friday 5pm UTC).
 
-  weeklyReports: defineTable({
-    weekNumber: v.number(),
-    contentCount: v.number(),
-    experimentCount: v.number(),
-    feedbackCount: v.number(),
-    interactionCount: v.number(),
-    reportContent: v.string(),
-    slackTs: v.optional(v.string()),
-  }).index("by_week", ["weekNumber"]),
+---
 
-  sources: defineTable({
-    key: v.string(),
-    url: v.optional(v.string()),
-    provider: v.string(),
-    evidenceTier: v.string(),
-    lastRefreshed: v.number(),
-    contentHash: v.string(),
-    embedding: v.optional(v.array(v.float64())),
-    summary: v.optional(v.string()),
-  }).vectorIndex("by_embedding", {
-    vectorField: "embedding",
-    dimensions: 1536,
-    filterFields: ["provider", "evidenceTier"],
-  }),
-});
+## Layer 2: The Hands (Inngest Orchestration)
+
+Inngest provides durable, step-based execution for all background work. Each function is idempotent, retryable, and observable. Inngest AgentKit provides multi-agent orchestration on top.
+
+### Weekly Cycle
+
+```
+Monday      → Weekly planning run
+Tue-Thu     → Content pipeline + feedback pipeline + community engagement
+Friday      → Weekly report generation
+Every 6h    → Community monitor (GitHub issue scan)
+Daily       → Source freshness audit
 ```
 
-### Convex Queries (reactive, powering real-time dashboard)
+### Inngest Functions
 
-- `getSystemHealth` -- connector status, recent runs, error counts
-- `listArtifacts` -- filter by type and status, used by content pipeline view
-- `getExperimentStatus` -- live experiment tracking with results
-- `getCommunityStats` -- interaction counts by channel, meaningful ratio
-- `getWeeklyReport` -- latest report with aggregated metrics
-- `getOpportunityQueue` -- scored opportunities for planning view
+**1. Weekly Planning (`growthcat/weekly.planning`)**
+- Trigger: Convex cron (Monday 9am UTC)
+- Steps: fetch DataForSEO keyword updates → scan community signals → score opportunities → select week's focus → post morning priorities to Slack
+- Stores: opportunity snapshots in Convex, workflow run log
+- Emits: `growthcat/content.generate` events for selected topics
 
-### Convex Mutations
+**2. Content Generation (`growthcat/content.generate`)**
+- Trigger: event from planner or Slack command
+- Steps: retrieve knowledge context → generate draft via LLM → run 8 quality gates → store artifact in Convex → if validated, trigger publishing
+- Stores: artifact (draft → validating → validated/rejected), workflow run log
+- Emits: `growthcat/content.publish` if all gates pass
 
-- `createArtifact`, `updateArtifactStatus`, `publishArtifact`
-- `logWorkflowRun`, `completeWorkflowRun`
-- `createExperiment`, `updateExperimentResults`
-- `submitFeedback`, `updateFeedbackStatus`
-- `recordInteraction`
-- `saveWeeklyReport`
+**3. Content Publishing (`growthcat/content.publish`)**
+- Trigger: event from content generation
+- Steps: publish to CMS (GitHub commit or RC blog API) → create Typefully drafts for social distribution → update artifact status to published
+- Stores: updated artifact status, Typefully draft IDs
+- Emits: `growthcat/content.measure` (scheduled for 7 days later)
 
-### Convex Actions (external API calls)
+**4. Feedback Pipeline (`growthcat/feedback.generate`)**
+- Trigger: event from planner
+- Steps: analyze community signals + API usage patterns → generate structured feedback → validate evidence → file as GitHub Issue
+- Stores: feedback items in Convex
+- Emits: none (terminal)
 
-- LLM generation via Vercel AI SDK (`generateText`, `streamText`)
-- DataForSEO keyword, SERP, AI visibility, and content analysis
-- Slack message posting via `@slack/web-api`
-- Typefully draft creation, scheduling, and queue management
-- GitHub gist, file, comment creation via REST API
-- RevenueCat API queries via REST API v2
+**5. Community Monitor (`growthcat/community.scan`)**
+- Trigger: Inngest cron (every 6 hours)
+- Steps: scan RevenueCat SDK repos (purchases-ios, android, flutter) → filter for agent-related keywords → deduplicate against past engagements → generate responses → post replies
+- Stores: community interactions in Convex
+- Max 5 engagements per scan to avoid flooding
 
-### Convex Cron Jobs (convex/crons.ts)
+**6. Experiment Runner (`growthcat/experiment.run`)**
+- Trigger: event from planner
+- Steps: design hypothesis → fetch baseline metrics from DataForSEO → execute experiment action → schedule measurement after 7 days → compare results → report
+- Stores: experiment record in Convex (planned → running → completed/stopped)
+- Emits: none (measurement is a scheduled step within the same function)
 
-- Weekly planning run (Monday 9am UTC)
-- Daily source freshness audit
-- Connector health check (every 6 hours)
-- Weekly report generation (Friday 5pm UTC)
+**7. Weekly Report (`growthcat/report.generate`)**
+- Trigger: Convex cron (Friday 5pm UTC)
+- Steps: aggregate week's metrics (content count, experiment results, feedback count, interaction count, meaningful ratio) → generate report narrative via LLM → post to Slack → store in Convex
+- Stores: weekly report in Convex
+- Emits: none (terminal)
 
-### Convex File Storage
+**8. Slack Handler (`growthcat/slack.handle`)**
+- Trigger: event from Slack webhook (after 3s ack)
+- Steps: parse command → route to appropriate handler (focus, write, status, report, stop, resume, help, or general question) → respond in Slack thread
+- For `write about [topic]`: emits `growthcat/content.generate`
+- For `focus on [topic]`: updates opportunity weights
+- For general questions: calls Convex Agent brain directly
 
-- Artifact content files (markdown, HTML)
-- Evidence pack screenshots
-- Export archives
+**9. Source Freshness (`growthcat/sources.refresh`)**
+- Trigger: Convex cron (daily)
+- Steps: check all sources for staleness → re-crawl stale sources → re-chunk and re-embed changed content → update content hashes
+- Stores: updated source records in Convex
 
-### Convex Agent Component (@convex-dev/agent)
+### Inngest AgentKit Network
 
-- Thread management for panel console conversations
-- Message history persistence
-- RAG context via vector search on sources table
-- Tool calling integration
+Five agents with deterministic state-based routing:
 
-### Convex Vector Search
+| Agent | Role | Tools |
+| --- | --- | --- |
+| Weekly Planner | Plan priorities from scored opportunities | fetchKeywordData, scoreOpportunities, assignToAgents |
+| Content Generator | Create technical content for agent builders | searchDataForSEO, generateBlogPost, validateQualityGates |
+| Growth Experimenter | Design and run measurable experiments | designExperiment, trackMetrics, analyzeResults |
+| Product Feedback | Generate structured product feedback | analyzeAPIUsage, structureFeedback, submitToTracker |
+| Community Engagement | Engage across X, GitHub, Discord | draftReply, postTweet, createGist, scoreInteraction |
 
-- On `sources` table -- RAG for panel console and content grounding
-- On `artifacts` table -- novelty detection (find similar existing content)
+Router logic: if no weekly plan exists, route to planner. Once plan exists, execute plan items in order by routing to the appropriate agent. When all plan items are complete, the network run ends.
 
-### Convex Text Search
+### Convex HTTP Actions
 
-- On `artifacts.content` -- full-text search for deduplication
-- On `communityInteractions.content` -- find relevant past engagements
+7 authenticated HTTP endpoints for Inngest to write to Convex:
 
-### Determinism and Dedup Model
+- All endpoints require Bearer token auth (GROWTHCAT_INTERNAL_SECRET)
+- Fail-closed: returns 401 if secret is not configured
+- Endpoints: artifacts, feedback, community, reports, opportunities, workflow-runs, metrics
+- Health check endpoint (no auth required)
+
+---
+
+## Layer 3: The Face (What People Interact With)
+
+### Public Microsite
+
+All pages at the application URL. Every page includes the chat widget.
+
+| Page | Purpose |
+| --- | --- |
+| `/` (landing) | Application letter + chat widget + proof links |
+| `/application` | Full application letter |
+| `/proof-pack` | First-week outputs: 2 flagships, 1 experiment, 3 feedback, 1 report |
+| `/articles/[slug]` | Individual published articles |
+| `/readiness-review` | Self-assessment against job requirements |
+| `/operator-replay` | How GrowthCat works: architecture, tools, safety model |
+
+### Chat Widget
+
+The chat widget is the application's differentiator. RC's hiring council can talk to GrowthCat directly on the application site.
+
+- **Powered by Convex Agent** (not raw `streamText`): persistent threads, message history, tool calling, RAG on every response
+- Floating button on all public pages: "Talk to GrowthCat"
+- Expandable panel with message history
+- 5 suggested prompts for first-time visitors (week 1 plan, webhook handling, growth experiments, agent DX feedback, content measurement)
+- Auto-scroll, loading states, error handling
+- RC-branded design (coral primary, dark header, surface backgrounds)
+
+### Slack
+
+Post-hire, Slack is the primary interaction surface. RC never needs to open a dashboard.
+
+**What RC can do:**
+- `@GrowthCat focus on [topic]` -- adjusts weekly plan
+- `@GrowthCat write about [topic]` -- generates content draft
+- `@GrowthCat status` -- current week's progress
+- `@GrowthCat stop` / `@GrowthCat pause` -- halts all automated actions
+- `@GrowthCat resume` -- resumes paused operations
+- `@GrowthCat report` -- generates instant metrics summary
+- `@GrowthCat help` -- lists available commands
+- General questions -- answered via Convex Agent brain
+
+**What GrowthCat posts to Slack:**
+- Morning priorities (Monday-Friday)
+- Content drafts for review (if review mode is "draft-only")
+- Experiment results
+- Weekly async report (Friday)
+- Alerts on important community mentions
+
+### Panel Console
+
+Live streaming console for the panel interview.
+
+- Same Convex Agent brain as the chat widget
+- Dark theme, screen-share optimized (large readable text, smooth token streaming)
+- Prompt bar, source list, reasoning steps, streaming output, status bar
+- SSE streaming via Next.js API route
+- Token auth (GROWTHCAT_PANEL_TOKEN)
+- Graceful disconnect handling
+
+### Operator Console
+
+The human partner's control surface. All pages under `/operator/`.
+
+| Page | Purpose | Data source |
+| --- | --- | --- |
+| `/onboarding` | RC self-service: Slack OAuth, CMS key, Charts key, preferences | Saves to Convex |
+| `/dashboard` | System health, connector status, recent runs | Convex reactive queries (live) |
+| `/pipeline` | Content lifecycle: draft → validated → published | Convex reactive queries |
+| `/community` | Interaction tracker by channel with quality scores | Convex reactive queries |
+| `/experiments` | Active experiments with hypothesis and results | Convex reactive queries |
+| `/feedback` | Feedback items by status | Convex reactive queries |
+| `/report` | Weekly report builder and archive | Convex reactive queries |
+| `/panel` | Panel interview console | SSE + Convex Agent |
+
+---
+
+## Layer 4: Determinism + Quality
+
+### Dedup Keys by Entity
 
 Every pipeline step is idempotent. Running the same step twice produces the same result without duplication.
-
-**Dedup keys by entity:**
 
 | Entity | Dedup key | Check |
 | --- | --- | --- |
@@ -311,598 +302,58 @@ Every pipeline step is idempotent. Running the same step twice produces the same
 | Experiment | experimentKey (unique) | Convex query by key |
 | Weekly report | weekNumber | Convex upsert by weekNumber |
 
-**Content lifecycle state machine:**
+### Content Lifecycle State Machine
 
 ```
 planned → generating → draft → validating → validated → publishing → published → measuring
-                         ↑                      ↓
-                         └──── rejected ────────┘
+                        ↑                      ↓
+                        └──── rejected ────────┘
 ```
 
-Artifacts can only move forward. State transitions are Convex mutations — atomic and transactional.
+Artifacts can only move forward. State transitions are Convex mutations -- atomic and transactional. Every step checks existence before creating (idempotent pipeline pattern).
 
-**Idempotent pipeline pattern:**
+### 8 Quality Gates
 
-```typescript
-// Every step checks existence before creating
-const existing = await ctx.runQuery(api.artifacts.getBySlug, { slug });
-if (existing) return existing; // Don't regenerate
-```
-
-**Typefully dedup via tags:** Each Typefully draft is tagged with the artifact slug. Before creating a new draft, check `list_drafts({ tag: [slug] })`. If a draft exists for this slug, skip.
-
-### Inngest AgentKit Network
-
-```typescript
-// agents/network.ts
-const weeklyPlanner = createAgent({
-  name: "weekly-planner",
-  system: "Plan the week's priorities from scored opportunities...",
-  tools: [fetchKeywordData, scoreOpportunities, assignToAgents],
-});
-
-const contentAgent = createAgent({
-  name: "content-generator",
-  system: "Create technical content about RevenueCat for agent builders...",
-  tools: [searchDataForSEO, generateBlogPost, validateQualityGates],
-});
-
-const growthAgent = createAgent({
-  name: "growth-experimenter",
-  system: "Design and run measurable growth experiments...",
-  tools: [designExperiment, trackMetrics, analyzeResults],
-});
-
-const feedbackAgent = createAgent({
-  name: "product-feedback",
-  system: "Generate structured product feedback from usage patterns...",
-  tools: [analyzeAPIUsage, structureFeedback, submitToTracker],
-});
-
-const communityAgent = createAgent({
-  name: "community-engagement",
-  system: "Engage with developer communities across X, GitHub, Discord...",
-  tools: [draftReply, postTweet, createGist, scoreInteraction],
-});
-
-export const growthCatNetwork = createNetwork({
-  name: "growthcat",
-  agents: [weeklyPlanner, contentAgent, growthAgent, feedbackAgent, communityAgent],
-  defaultModel: anthropic({ model: "claude-sonnet-4-20250514" }),
-  router: ({ network }) => {
-    // Deterministic state-based routing
-    if (!network?.state.kv.has("weekly_plan")) return weeklyPlanner;
-    const plan = network?.state.kv.get("plan") as string[];
-    if (plan.length > 0) {
-      const next = plan.shift();
-      network?.state.kv.set("plan", plan);
-      return network?.agents.get(next);
-    }
-    return undefined; // Week complete
-  },
-});
-```
-
-### Vercel AI SDK Integration Patterns
-
-```typescript
-// Content generation (non-streaming)
-import { generateText, Output } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
-const { text } = await generateText({
-  model: anthropic('claude-sonnet-4-20250514'),
-  system: voiceProfile.systemPrompt,
-  prompt: contentBrief,
-});
-
-// Panel console streaming (Next.js API route)
-import { streamText } from 'ai';
-const result = streamText({
-  model: anthropic('claude-sonnet-4-20250514'),
-  system: systemPrompt,
-  prompt: panelPrompt,
-  maxTokens: 4096,
-  temperature: 0.3,
-});
-// Stream via result.textStream or result.toTextStreamResponse()
-
-// Structured output with Zod validation
-const { output } = await generateText({
-  model: anthropic('claude-sonnet-4-20250514'),
-  output: Output.object({
-    schema: z.object({
-      title: z.string(),
-      slug: z.string(),
-      content: z.string(),
-      qualityScore: z.number(),
-    }),
-  }),
-  prompt: 'Generate a blog post about RevenueCat webhooks...',
-});
-
-// Tool calling
-import { tool } from 'ai';
-const tools = {
-  searchDataForSEO: tool({
-    description: 'Search DataForSEO for keyword data',
-    inputSchema: z.object({ keywords: z.array(z.string()) }),
-    execute: async ({ keywords }) => { /* fetch from DataForSEO */ },
-  }),
-};
-```
-
-### Inngest Setup (Next.js App Router)
-
-```typescript
-// inngest/client.ts
-import { Inngest } from 'inngest';
-export const inngest = new Inngest({ id: 'growthcat' });
-
-// inngest/functions.ts — example weekly loop
-export const weeklyPlanningRun = inngest.createFunction(
-  { id: 'weekly-planning' },
-  { cron: 'TZ=UTC 0 9 * * MON' },
-  async ({ step }) => {
-    const opportunities = await step.run('discover', async () => { /* DataForSEO fetch */ });
-    const plan = await step.run('plan', async () => { /* score + prioritize */ });
-    await step.run('notify', async () => { /* post to Slack */ });
-    return plan;
-  }
-);
-
-// app/api/inngest/route.ts
-import { serve } from 'inngest/next';
-import { inngest } from '@/inngest/client';
-import { weeklyPlanningRun } from '@/inngest/functions';
-export const { GET, POST, PUT } = serve({
-  client: inngest,
-  functions: [weeklyPlanningRun],
-});
-```
-
-Note: Inngest functions (step-based durable execution) complement AgentKit (multi-agent orchestration). Use Inngest functions for scheduled jobs and background tasks, AgentKit for complex multi-agent workflows.
-
-### Convex + Next.js Integration Patterns
-
-```typescript
-// Server Component — preload data
-import { preloadQuery } from 'convex/nextjs';
-import { api } from '@/convex/_generated/api';
-
-export async function ProofPackPage() {
-  const artifacts = await preloadQuery(api.artifacts.list, { status: 'published' });
-  return <ArtifactList preloaded={artifacts} />;
-}
-
-// Client Component — reactive real-time queries
-'use client';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-
-export function Dashboard() {
-  const runs = useQuery(api.workflowRuns.list, { limit: 10 }); // Auto-updates!
-  const stats = useQuery(api.community.getStats);
-  // ...
-}
-
-// Server Action — fetch + mutate
-import { fetchQuery, fetchMutation } from 'convex/nextjs';
-const data = await fetchQuery(api.experiments.list, { status: 'running' });
-await fetchMutation(api.artifacts.updateStatus, { id, status: 'published' });
-```
-
-### Typefully Distribution Flow
-
-```typescript
-// One call → 5 platforms (X, LinkedIn, Threads, Bluesky, Mastodon)
-const draft = await typefully.createDraft({
-  social_set_id: GROWTHCAT_SOCIAL_SET_ID,
-  draft_title: artifact.slug, // Used for internal org
-  tags: [artifact.slug],       // Dedup key
-  platforms: {
-    x: { enabled: true, posts: [{ text: xThread[0] }] },
-    linkedin: { enabled: true, posts: [{ text: linkedinPost }] },
-    threads: { enabled: true, posts: [{ text: threadsPost }] },
-    bluesky: { enabled: true, posts: [{ text: blueskyPost }] },
-  },
-  publish_at: 'next-free-slot', // Typefully picks optimal time
-});
-```
-
-Supported platforms: X (@growthcat), LinkedIn, Threads, Bluesky, Mastodon.
-Scheduling: `"next-free-slot"` uses Typefully's queue schedule. `"now"` for immediate. ISO datetime for specific time.
-Dedup: Tag each draft with artifact slug. Check `list_drafts({ tag: [slug] })` before creating.
-
-### DataForSEO Available Endpoints
-
-| Endpoint | Purpose | Status |
+| Gate | What it checks | Fail action |
 | --- | --- | --- |
-| Labs: keyword_ideas | Discover related keywords from seeds | Available |
-| Labs: bulk_keyword_difficulty | Difficulty scores for target keywords | Available |
-| Labs: keywords_for_site | What keywords a domain ranks for | Available (not tested) |
-| Labs: ranked_keywords | Competitor keyword rankings | Available (not tested) |
-| Labs: keyword_suggestions | Auto-complete suggestions | Available (not tested) |
-| SERP: organic_live_advanced | Live search result pages | Available (not tested) |
-| Content Analysis: summary | Topic and mention trends | Available (not tested) |
-| Content Analysis: search | Content matching keywords | Available (not tested) |
-| AI Optimization: LLM mentions | Track what LLMs say about RevenueCat | **Needs paid plan upgrade** |
-| AI Optimization: LLM response | Query specific LLM models | **Needs paid plan upgrade** |
+| 1. Grounding | Every claim maps to a cited source | Block publication |
+| 2. Novelty | Not a duplicate or low-delta against corpus | Reroute to docs PR or canonical answer |
+| 3. Technical | Code samples compile, API refs correct, terms accurate | Block until fixed |
+| 4. SEO | Title, meta, headings, links, keyword targeting | Block until fixed |
+| 5. AEO | Extractable answer passages, FAQ blocks, definitions | Block until fixed |
+| 6. GEO | Comparison tables, schema markup, citation structure | Block until fixed |
+| 7. Benchmark | Measurably stronger than the obvious existing alternative | Reroute to derivative |
+| 8. Voice | Consistent with GrowthCat voice profile, disclosure rules | Block until fixed |
 
-The AI Optimization endpoints are the highest-value upgrade. They enable monitoring what ChatGPT, Perplexity, Claude, and Gemini say about RevenueCat — critical for AEO/GEO strategy.
-
-## Implementation Status
-
-### Phase 1: Foundation — COMPLETE
-
-Next.js 15 app with Convex backend, public microsite pages, and core schema.
-
-**Scope:**
-
-- Next.js 15 App Router project with Tailwind CSS v4
-- Convex setup: schema definition, ConvexProvider, basic queries and mutations
-- Environment configuration (Convex deployment URL, API keys)
-- Public pages: landing (application letter), proof-pack, articles, readiness-review, operator-replay
-- Content from markdown files for static article pages
-
-**Hiring stage:** Application gate
-
-### Phase 2: Agent Network — COMPLETE
-
-Inngest AgentKit multi-agent system with all five agents and their tools.
-
-**Scope:**
-
-- Inngest project setup and AgentKit dependency
-- Define 5 agents: planner, content, growth, feedback, community
-- Define tools for each agent (DataForSEO, Slack, Typefully, GitHub, RevenueCat API calls)
-- Wire agent network with deterministic code-based router
-- Convex actions for all external API calls
-- Vercel AI SDK integration (`generateText` and `streamText`)
-- Connector wrappers using native `fetch` for all external APIs
-
-**Hiring stage:** Take-home (48h autonomous execution)
-
-### Phase 3: Content Pipeline — COMPLETE
-
-End-to-end content generation through the agent network with quality validation.
-
-**Scope:**
-
-- Content generation workflow via Inngest agent network
-- Quality gate validation (all 8 gates)
-- Artifact storage and lifecycle management in Convex
-- Publishing pipeline (draft, validated, published, rejected)
-- Convex text search for novelty detection and deduplication
-- Prompt templates for all content types (blog post, growth analysis, feedback report, experiment brief, weekly report, social post, panel response)
-
-**Hiring stage:** Application + take-home
-
-### Phase 4: Operating Loop — COMPLETE
-
-Automated weekly cycle with experiment tracking, feedback, and reporting.
-
-**Scope:**
-
-- Convex cron jobs for weekly planning, daily freshness audit, connector health, and report generation
-- Experiment tracking: create, run, complete, stop with results in Convex
-- Feedback management: draft, structure, submit, acknowledge lifecycle
-- Community interaction tracking with quality scoring and meaningful flag
-- Weekly report auto-generation with aggregated metrics
-- Operator dashboard with real-time Convex reactive queries
-
-**Hiring stage:** All stages + post-hire operation
-
-### Phase 5: Panel Console — COMPLETE
-
-Live streaming console for the panel interview, with RAG-powered context retrieval.
-
-**Scope:**
-
-- SSE streaming via Next.js API route using Vercel AI SDK `streamText`
-- Panel console UI: dark theme, prompt bar, source list, reasoning steps, streaming output, status bar
-- Design for screen-sharing: large readable text, smooth token streaming, graceful disconnect
-- Convex Agent component (`@convex-dev/agent`) for thread persistence and message history
-- Source retrieval via Convex vector search on the sources table
-- RAG context injection into panel responses
-
-**Hiring stage:** Panel interview (live)
-
-### Phase 6: Deploy and CI — COMPLETE (code complete, deployment pending)
-
-Production deployment on managed platforms with CI pipeline.
-
-**Scope:**
-
-- Vercel deployment for Next.js application
-- Convex cloud (managed database, cron, file storage, vector search)
-- Inngest cloud (managed agent orchestration)
-- GitHub Actions CI: lint, typecheck, test, build
-- Environment variable management across Vercel, Convex, and Inngest
-
-**Hiring stage:** Founder interview + production readiness
-
-### Phase summary
-
-| Phase | Scope | Hiring stage | Status |
-| --- | --- | --- | --- |
-| 1: Foundation | Next.js + Convex + public pages | Application gate | COMPLETE |
-| 2: Agent Network | Inngest AgentKit + 5 agents + tools | Take-home (48h) | COMPLETE |
-| 3: Content Pipeline | Generation + quality gates + publishing | Application + take-home | COMPLETE |
-| 4: Operating Loop | Crons + experiments + feedback + reports | All + post-hire | COMPLETE |
-| 5: Panel Console | SSE streaming + RAG + dark UI | Panel interview (live) | COMPLETE |
-| 6: Deploy and CI | Vercel + Convex + Inngest + GitHub Actions | Founder interview | COMPLETE (code complete, deployment pending) |
-
-### Execution order
+### Self-Optimization Loop
 
 ```
-Phase 1 (Foundation)            <- Next.js + Convex + public pages              COMPLETE
-    |
-Phase 2 (Agent Network)         <- Inngest AgentKit + tools + connectors        COMPLETE
-    |
-Phase 3 (Content Pipeline)      -> APPLICATION READY                            COMPLETE
-    |
-Phase 4 (Operating Loop)        -> TAKE-HOME READY                              COMPLETE
-    |
-Phase 5 (Panel Console)         -> PANEL INTERVIEW READY                        COMPLETE
-    |
-Phase 6 (Deploy and CI)         -> FOUNDER INTERVIEW READY                      COMPLETE (deployment pending)
+Measure (weekly metrics) → Analyze (what worked) → Adjust (shift allocation) → Execute → Measure
 ```
 
-## Vertical Slices
+- Which content formats get highest engagement? Shift toward those formats.
+- Which distribution channels drive most reach? Increase allocation to winning channels.
+- Which posting times get most engagement? Adjust Typefully queue schedule.
+- Which topics resonate most? Weight opportunity scoring toward those clusters.
+- Which community channels yield most meaningful interactions? Focus engagement there.
 
-From the roadmap. The critical path to a strong application is VS1 through VS6.
+All adjustments are logged and reported in the weekly async report. The team can override any automatic adjustment.
 
-| Slice | Name | Main outcome | Status |
-| --- | --- | --- | --- |
-| VS1 | Strategy Kernel | Growth inputs, scoring, voice, evidence contracts | PLANNED |
-| VS2 | Knowledge and Source Intake | Source ingest, concept cards, freshness rules | PLANNED |
-| VS3 | Public Application Core | Microsite, evidence bundle, application artifacts | PLANNED |
-| VS4 | RevenueCat Proof Pack | Demo repo, readiness review, flagship pieces | PLANNED |
-| VS5 | Weekly Operating Loop | Experiment, feedback, reporting, canonical answers | PLANNED |
-| VS6 | Quality and Benchmark Gate | Novelty, SEO/AEO/GEO, benchmark validation | PLANNED |
-| VS7 | Connected Shadow Mode | GitHub/Slack connection, first-hour audit, trust ramp | PLANNED |
-| VS8 | Hiring Stage Modes | Take-home, panel, founder support | PLANNED |
-| VS9 | Hosted Readiness | Vercel + Convex + Inngest deployment, smoke tests, replayability | PLANNED |
+### Security Model
 
-### VS1: Strategy Kernel
-
-- **Scope:** `lib/config/voice.ts`, `lib/config/growth.ts`, `lib/config/quality.ts`, `lib/config/strategy.ts`, `agents/tools/scoring.ts`
-- **Exit criteria:** scoring weights are versioned; pre-apply input matrix includes RevenueCat public sources and DataForSEO; strategy outputs can be blocked when evidence is weak
-- **Status:** PLANNED
-
-### VS2: Knowledge and Source Intake
-
-- **Scope:** `convex/sources.ts` (vector search for RAG), source snapshot model, concept-card and briefing-pack builders, freshness audit cron
-- **Exit criteria:** public-only ingest works; briefing packs can be built for application and take-home contexts; stale-source detection is explicit
-- **Status:** PLANNED
-
-### VS3: Public Application Core
-
-- **Scope:** `app/(public)/` pages (landing, proof-pack, articles, operator-replay), content from markdown, static generation
-- **Exit criteria:** one stable application URL path exists; careers-form-supporting links can be assembled from stored artifacts; no manual copy-paste required
-- **Status:** PLANNED
-
-### VS4: RevenueCat Proof Pack
-
-- **Scope:** public demo repo, readiness review page, first two flagship artifacts, first three feedback artifacts
-- **Exit criteria:** proof pack contains at least one real API-integrated demo; flagship pieces are clearly different from existing RevenueCat content; feedback artifacts are structured and evidence-backed
-- **Status:** PLANNED
-
-### VS5: Weekly Operating Loop
-
-- **Scope:** Inngest agent network weekly execution, Convex cron triggers, experiment workflow, product-feedback workflow, weekly reporting, canonical answers, derivative content
-- **Exit criteria:** two content artifacts, one experiment artifact, three feedback artifacts, one weekly report, meaningful interaction accounting
-- **Status:** PLANNED
-
-### VS6: Quality and Benchmark Gate
-
-- **Scope:** `agents/tools/quality-gates.ts`, novelty checks via Convex text search, SEO/AEO/GEO validators, competitor benchmark corpus, post-publish review hooks
-- **Exit criteria:** low-novelty draft fails publication; benchmark comparison is explicit; flagships show why they are stronger than the obvious alternative
-- **Status:** PLANNED
-
-### VS7: Connected Shadow Mode
-
-- **Scope:** `lib/connectors/` (Slack, Typefully, GitHub, RevenueCat), asset selector, first-hour audit, draft-only and revoke path
-- **Exit criteria:** connection works with least privilege; first-hour audit is evidence-backed; revoke works without redeploy
-- **Status:** PLANNED
-
-### VS8: Hiring Stage Modes
-
-- **Scope:** take-home mode (Inngest agent network execution), panel mode (`app/(operator)/panel/`), founder mode (briefing pack generation), stage-specific rubric scoring
-- **Exit criteria:** take-home packaging works; panel console is safe to share; founder pack explains business value and autonomy boundaries clearly
-- **Status:** PLANNED
-
-### VS9: Hosted Readiness
-
-- **Scope:** Vercel deployment, Convex cloud, Inngest cloud, smoke tests, run replay tools
-- **Exit criteria:** application loads on Vercel; Convex queries respond; Inngest functions trigger; health check passes; logs and traces are readable
-- **Status:** PLANNED
-
-## Key Modules
-
-### Project Counts
-
-- 70 TypeScript/CSS source files
-- 25 Next.js routes (14 static, 6 SSG, 3 dynamic API, 2 dynamic pages)
-- 11 Convex backend files
-- 8 Inngest functions (6 in functions.ts + 1 slack handler + 1 community monitor)
-- 13 agent files (6 agents + 7 tools)
-- 15 lib files (3 config + 5 connectors + 7 prompts)
-
-### File structure
-
-```
-app/                              # Next.js App Router
-├── (public)/                     # Public microsite pages
-│   ├── page.tsx                  # Landing / application letter
-│   ├── proof-pack/page.tsx
-│   ├── articles/
-│   ├── readiness-review/page.tsx
-│   └── operator-replay/page.tsx
-├── (operator)/                   # Operator console (dark theme)
-│   ├── dashboard/page.tsx
-│   ├── panel/page.tsx            # Live panel console
-│   ├── pipeline/page.tsx         # Content pipeline view
-│   ├── community/page.tsx        # Interaction tracker
-│   ├── experiments/page.tsx
-│   ├── feedback/page.tsx
-│   ├── report/page.tsx           # Weekly report builder
-│   ├── onboarding/page.tsx       # Self-service onboarding for RevenueCat
-│   └── hooks/useConvexSafe.ts    # Safe Convex query hook with fallback
-├── api/                          # API routes
-│   ├── panel/session/route.ts    # SSE streaming endpoint
-│   ├── slack/events/route.ts     # Slack event handler with HMAC verification
-│   └── inngest/route.ts          # Inngest webhook handler
-├── layout.tsx
-└── globals.css
-
-inngest/                          # Inngest functions and handlers
-├── client.ts                     # Inngest client configuration
-├── functions.ts                  # 6 core Inngest functions (weekly loop, content, etc.)
-├── slack-handler.ts              # Background Slack command processor
-└── community-monitor.ts          # GitHub issue scanner (every 6h)
-
-convex/                           # Convex backend
-├── schema.ts                     # All table definitions
-├── artifacts.ts                  # Queries + mutations for artifacts
-├── workflowRuns.ts               # Queries + mutations for runs
-├── experiments.ts
-├── feedbackItems.ts
-├── opportunities.ts
-├── community.ts
-├── weeklyReports.ts
-├── sources.ts                    # With vector search for RAG
-├── crons.ts                      # Scheduled jobs
-├── http.ts                       # Authenticated HTTP endpoints for Inngest
-└── convex.config.ts              # Component configuration (@convex-dev/agent)
-
-agents/                           # Inngest AgentKit
-├── network.ts                    # GrowthCat agent network definition
-├── planner.ts                    # Weekly planner agent
-├── content.ts                    # Content generation agent
-├── growth.ts                     # Growth experiment agent
-├── feedback.ts                   # Product feedback agent
-├── community.ts                  # Community engagement agent
-└── tools/                        # Shared agent tools
-    ├── dataforseo.ts
-    ├── slack.ts
-    ├── typefully.ts
-    ├── github.ts
-    ├── revenuecat.ts
-    ├── quality-gates.ts
-    └── scoring.ts
-
-lib/                              # Shared utilities
-├── config/
-│   ├── voice.ts                  # GrowthCat voice profile
-│   ├── quality.ts                # Publish gates config
-│   ├── strategy.ts               # Opportunity scoring weights
-│   └── growth.ts                 # Experiment templates
-├── connectors/                   # API client wrappers (native fetch)
-│   ├── dataforseo.ts
-│   ├── slack.ts
-│   ├── typefully.ts
-│   ├── github.ts
-│   └── revenuecat.ts
-├── convex-client.ts              # HTTP client for Inngest → Convex with bearer auth
-├── cms/
-│   └── publish.ts                # Publish articles via GitHub commits
-├── feedback/
-│   └── file-issue.ts             # File feedback as GitHub Issues
-└── content/
-    └── prompts/                  # LLM prompt templates
-        ├── blog-post.ts
-        ├── growth-analysis.ts
-        ├── feedback-report.ts
-        ├── experiment-brief.ts
-        ├── weekly-report.ts
-        ├── social-post.ts
-        └── panel-response.ts
-```
-
-### Module map
-
-| Path | Purpose | Used by |
+| Surface | Auth method | Details |
 | --- | --- | --- |
-| `convex/schema.ts` | All table definitions with indexes, text search, and vector search | Everything |
-| `convex/artifacts.ts` | Artifact CRUD queries and mutations | Content pipeline |
-| `convex/sources.ts` | Source management with vector search for RAG | Knowledge layer, panel console |
-| `convex/crons.ts` | Scheduled jobs (weekly planning, freshness audit, health check, reporting) | Operating loop |
-| `convex/http.ts` | Authenticated HTTP endpoints for Inngest (7 endpoints, bearer auth) | Inngest functions, external integrations |
-| `convex/convex.config.ts` | Component configuration for @convex-dev/agent | Panel console |
-| `agents/network.ts` | GrowthCat 5-agent network with deterministic router | All agent workflows |
-| `agents/planner.ts` | Weekly planner agent definition | Monday planning |
-| `agents/content.ts` | Content generation agent definition | Content pipeline |
-| `agents/growth.ts` | Growth experiment agent definition | Experiment tracking |
-| `agents/feedback.ts` | Product feedback agent definition | Feedback loop |
-| `agents/community.ts` | Community engagement agent definition | Interaction tracking |
-| `agents/tools/*.ts` | Shared agent tools (DataForSEO, Slack, Typefully, GitHub, RevenueCat, quality gates, scoring) | All agents |
-| `lib/config/voice.ts` | GrowthCat identity, public persona, disclosure rules, tone | All LLM prompts |
-| `lib/config/quality.ts` | Publish gates, novelty thresholds, SEO/AEO/GEO checks | Content validation |
-| `lib/config/strategy.ts` | Growth-input matrix, opportunity scoring weights, KPI trees | Discovery, planning |
-| `lib/config/growth.ts` | Metric families, experiment templates | Growth workflows |
-| `lib/connectors/typefully.ts` | Typefully API client for multi-platform social distribution | Social posting, scheduling |
-| `lib/connectors/*.ts` | API client wrappers using native fetch | Convex actions, agent tools |
-| `lib/convex-client.ts` | HTTP client for Inngest to write to Convex with bearer auth | All Inngest functions |
-| `lib/cms/publish.ts` | Publish articles by committing markdown with frontmatter to GitHub | Content pipeline |
-| `lib/feedback/file-issue.ts` | File structured product feedback as GitHub Issues | Feedback agent |
-| `lib/content/prompts/*.ts` | 7 LLM prompt templates | All content types |
-| `app/(public)/*` | Public microsite pages (landing, proof-pack, articles, readiness-review, operator-replay) | Application stage |
-| `app/(operator)/*` | Operator console pages (dashboard, panel, pipeline, community, experiments, feedback, report, onboarding) | All stages |
-| `app/(operator)/onboarding/page.tsx` | Self-service 4-step onboarding for RevenueCat to connect services | Post-hire onboarding |
-| `app/(operator)/hooks/useConvexSafe.ts` | Safe Convex query hook with fallback for resilient UI | All operator pages |
-| `app/api/panel/session/route.ts` | SSE streaming endpoint for panel console | Panel interview |
-| `app/api/slack/events/route.ts` | Slack event handler with HMAC-SHA256 verification | Slack bot |
-| `inngest/slack-handler.ts` | Background Slack command processor (runs after 3s ack) | Slack bot |
-| `inngest/community-monitor.ts` | GitHub issue scanner for agent-related signals (every 6h cron) | Community engagement |
-| `agents/tools/typefully.ts` | Agent tool for creating Typefully drafts with multi-platform distribution | Content and community agents |
+| Convex HTTP endpoints | Bearer token | GROWTHCAT_INTERNAL_SECRET, fail-closed |
+| Panel SSE endpoint | Token auth | GROWTHCAT_PANEL_TOKEN |
+| Slack events | HMAC-SHA256 | Timing-safe comparison + 5min replay protection |
+| Inngest | SDK signing | INNGEST_SIGNING_KEY in production |
+| Onboarding credentials | Server-side storage | RC keys stored in Convex, never seen by operator |
 
-## Integration Connectors
+All endpoints reject unauthenticated requests. Secrets never committed (.env files gitignored). Kill switch halts all side effects and checkpoints active runs.
 
-All connectors use native `fetch`. Each handles missing credentials gracefully (log warning, no crash).
-
-| Connector | Purpose | Auth | Endpoints |
-| --- | --- | --- | --- |
-| **DataForSEO** | Market intelligence: keyword ideas, SERP snapshots, AI keyword trends, content analysis | Basic auth (login, password) | keyword_ideas, serp_live, ai_visibility, content_trends |
-| **Slack** | Weekly reports, exception routing, health alerts, blocked submission alerts, first-hour audit summaries | Bot token via `@slack/web-api` | post_message, post_report, upload_file |
-| **Typefully** | Multi-platform social distribution: X, LinkedIn, Threads, Bluesky, Mastodon. Draft creation, scheduling (`next-free-slot`), queue management, tags for dedup, media uploads | API key via MCP | create_draft, list_drafts, get_queue, schedule |
-| **GitHub** | Public profile, demo repos, docs PRs, gists, issue/discussion replies | Bearer token via native fetch | create_gist, create_or_update_file, create_issue_comment, list_repo_discussions |
-| **RevenueCat** | Product data for demos and content grounding | Bearer token via native fetch to REST API v2 | get_customer, list_products, list_offerings, get_entitlement_products |
-
-Typefully replaces direct X/Twitter API integration. One API call distributes content across all social platforms with built-in scheduling, draft review, and queue management. OAuth 1.0a signing and per-platform rate limiting are handled by Typefully.
-
-Note on RevenueCat Charts API: Charts appears to be a dashboard feature, not a public REST endpoint. The connector covers available REST API v2 endpoints; Charts dashboard access would come post-hire via the dedicated Slack channel.
-
-### Slack-First Interaction Model
-
-RevenueCat interacts with GrowthCat primarily through Slack. The dedicated channel serves as the primary UI.
-
-**What RevenueCat can do in Slack:**
-- `@GrowthCat focus on [topic]` -- adjusts weekly plan
-- `@GrowthCat write about [topic]` -- generates content draft
-- `@GrowthCat status` -- current week's progress
-- `@GrowthCat stop` or `@GrowthCat pause` -- halts all automated actions
-- `@GrowthCat resume` -- resumes paused operations
-- `@GrowthCat report` -- generates instant metrics summary
-- `@GrowthCat help` -- lists available commands
-- General questions -- answered via Claude LLM
-
-**What GrowthCat posts to Slack:**
-- Morning priorities (Monday-Friday)
-- Content drafts for review
-- Experiment results
-- Weekly async report (Friday)
-- Alerts on important community mentions
-
-**What they DON'T need to do:**
-- Open a dashboard
-- Write prompts in special format
-- Learn new tools
-- Assign daily tasks
+---
 
 ## Growth Levers
-
-Comprehensive growth strategy for the DX advocate role, organized by lever type.
 
 ### Target Query Clusters (Data-Backed)
 
@@ -923,9 +374,7 @@ Based on DataForSEO keyword difficulty analysis (retrieved 2026-03-16):
 | P2 | in-app purchase api | 37 | Informational | RC vs DIY comparison |
 | P2 | subscription management api | 50 | Informational | Long-form guide |
 
-Note: Keywords with ~estimated difficulty had no DataForSEO data, likely indicating very low competition (good opportunity).
-
-### Content-led growth
+### Content-Led Growth (Levers 1-7)
 
 | # | Lever | Description | Frequency |
 | --- | --- | --- | --- |
@@ -937,7 +386,7 @@ Note: Keywords with ~estimated difficulty had no DataForSEO data, likely indicat
 | 6 | Migration guides | "Moving from DIY subscriptions to RevenueCat" for agent apps | 1/month |
 | 7 | RevenueCat Agent Cookbook | Collection of recipes for common agent + RC patterns | Ongoing |
 
-### Community-led growth
+### Community-Led Growth (Levers 8-13)
 
 | # | Lever | Description | Frequency |
 | --- | --- | --- | --- |
@@ -948,7 +397,7 @@ Note: Keywords with ~estimated difficulty had no DataForSEO data, likely indicat
 | 12 | Community spotlight | Feature agent builders who use RC successfully | 2/month |
 | 13 | Dev.to / Hashnode | Cross-post long-form content for wider reach | Per article |
 
-### SEO/AEO/GEO-led growth
+### SEO/AEO/GEO-Led Growth (Levers 14-19)
 
 | # | Lever | Description | Frequency |
 | --- | --- | --- | --- |
@@ -959,7 +408,7 @@ Note: Keywords with ~estimated difficulty had no DataForSEO data, likely indicat
 | 18 | AI mention monitoring | Track what ChatGPT, Perplexity, Claude say about RC (DataForSEO AI Optimization API) | Weekly |
 | 19 | Schema markup | Structured data on all published pages for rich results | Per page |
 
-### Developer tooling growth
+### Developer Tooling Growth (Levers 20-24)
 
 | # | Lever | Description | Frequency |
 | --- | --- | --- | --- |
@@ -969,7 +418,7 @@ Note: Keywords with ~estimated difficulty had no DataForSEO data, likely indicat
 | 23 | Starter templates | Template repos for popular agent frameworks + RC | 3-5 templates |
 | 24 | Playground | Interactive sandbox for testing RC API calls | Ship once |
 
-### Product feedback growth
+### Product Feedback Growth (Levers 25-29)
 
 | # | Lever | Description | Frequency |
 | --- | --- | --- | --- |
@@ -979,16 +428,16 @@ Note: Keywords with ~estimated difficulty had no DataForSEO data, likely indicat
 | 28 | SDK DX improvements | Identify and propose fixes for agent-unfriendly patterns | Ongoing |
 | 29 | Documentation PRs | Direct PRs to RC docs improving agent developer experience | 2+/month |
 
-### Distribution and amplification
+### Distribution and Amplification (Levers 30-33)
 
 | # | Lever | Description | Frequency |
 | --- | --- | --- | --- |
-| 30 | Typefully multi-platform | Every content piece -- X + LinkedIn + Threads + Bluesky simultaneously | Per artifact |
-| 31 | Derivative content | Long-form -- X thread + GitHub gist + short summary + Slack post | Per flagship |
+| 30 | Typefully multi-platform | Every content piece to X + LinkedIn + Threads + Bluesky simultaneously | Per artifact |
+| 31 | Derivative content | Long-form to X thread + GitHub gist + short summary + Slack post | Per flagship |
 | 32 | Optimal scheduling | Typefully `next-free-slot` for peak engagement times | Automatic |
 | 33 | Content repurposing | Turn community answers into blog posts, blog posts into threads | Ongoing |
 
-### Experiment-driven growth
+### Experiment-Driven Growth (Levers 34-38)
 
 | # | Lever | Description | Frequency |
 | --- | --- | --- | --- |
@@ -998,7 +447,7 @@ Note: Keywords with ~estimated difficulty had no DataForSEO data, likely indicat
 | 37 | Programmatic SEO test | Auto-generated integration pages for search traffic | 1/quarter |
 | 38 | Social campaign | "Build a monetized app in 10 minutes" challenge | 1/quarter |
 
-### Ecosystem and partnership
+### Ecosystem and Partnership (Levers 39-42)
 
 | # | Lever | Description | Frequency |
 | --- | --- | --- | --- |
@@ -1007,53 +456,275 @@ Note: Keywords with ~estimated difficulty had no DataForSEO data, likely indicat
 | 41 | Conference talks | Operator presents with GrowthCat's research and content | As available |
 | 42 | Podcast appearances | Operator discusses AI agents in app development | As available |
 
-### Self-Optimization Loop
+### New Growth Levers (43-48)
 
-GrowthCat measures its own performance and adjusts strategy automatically:
+| # | Lever | Description | Frequency |
+| --- | --- | --- | --- |
+| 43 | Knowledge arbitrage | GrowthCat knows RC's docs better than any human; answers obscure questions instantly | Every interaction |
+| 44 | Real-time community response | Respond to GitHub issues within minutes, not hours | Every 6h scan |
+| 45 | Cross-platform content multiplication | One article becomes X thread + LinkedIn post + GitHub gist + Slack summary + community replies, all from one generation | Per flagship |
+| 46 | Experiment compounding | Each experiment's results inform next week's strategy automatically | Weekly |
+| 47 | Feedback pattern recognition | Aggregate feedback items to surface systemic issues, not one-off complaints | Weekly |
+| 48 | Competitive intelligence | Monitor Adapty/Superwall/Qonversion docs for changes; create comparison content when they ship features | Weekly |
 
-```
-Measure (weekly metrics) → Analyze (what worked) → Adjust (shift allocation) → Execute → Measure
-```
+---
 
-- Which content formats get highest engagement? -- Shift toward those formats
-- Which distribution channels drive most reach? -- Increase allocation to winning channels
-- Which posting times get most engagement? -- Adjust Typefully queue schedule
-- Which topics resonate most? -- Weight opportunity scoring toward those clusters
-- Which community channels yield most meaningful interactions? -- Focus engagement there
+## Typefully Integration
 
-All adjustments are logged and reported in the weekly async check-in. The team can override any automatic adjustment.
+### GrowthCat's Own Identity
 
-## Marketing Skills
+GrowthCat has its own Typefully social set with its own accounts:
+- X (@growthcat or similar)
+- LinkedIn
+- Threads
+- Bluesky
 
-These marketing skills should be integrated into GrowthCat's operating loop to produce differentiated, high-quality output.
+All posts are published under GrowthCat's identity with RevenueCat affiliation clearly disclosed.
 
-### Core operating skills
+### Post-Hire: RC Team Integration
 
-| Skill | Purpose in GrowthCat |
+After hiring, RC can add GrowthCat to their Typefully team:
+- RC invites GrowthCat with **Write & Publish** permission on their official social set
+- GrowthCat can then post from RC's official accounts (with appropriate review gates)
+- Typefully teams handle permission scoping -- GrowthCat only sees the social sets it's been granted access to
+
+### API v2 Integration
+
+All Typefully operations are scoped by `social_set_id`:
+- `create_draft({ social_set_id, platforms, tags, ... })` -- create multi-platform draft
+- `list_drafts({ social_set_id, tag })` -- check for dedup
+- `get_queue({ social_set_id })` -- review scheduled posts
+- `get_queue_schedule({ social_set_id })` -- optimal posting times
+
+Dedup: every draft is tagged with the artifact slug. Before creating, check `list_drafts({ tag: [slug] })`. If a draft exists for that slug, skip.
+
+Scheduling: `"next-free-slot"` uses Typefully's queue schedule. `"now"` for immediate. ISO datetime for specific time.
+
+---
+
+## Integration Connectors
+
+All connectors use native `fetch`. Each handles missing credentials gracefully (log warning, no crash).
+
+| Connector | Purpose | Auth | Key endpoints |
+| --- | --- | --- | --- |
+| DataForSEO | Market intelligence | Basic auth | keyword_ideas, serp_live, ai_visibility, content_trends |
+| Slack | Team communication | Bot token (`@slack/web-api`) | post_message, post_report, upload_file |
+| Typefully | Multi-platform social distribution | API key | create_draft, list_drafts, get_queue, schedule |
+| GitHub | Code artifacts, PRs, issues | Bearer token | create_gist, create_or_update_file, create_issue_comment |
+| RevenueCat | Product data for demos | Bearer token (REST API v2) | get_customer, list_products, list_offerings |
+
+### DataForSEO Endpoint Status
+
+| Endpoint | Purpose | Status |
+| --- | --- | --- |
+| Labs: keyword_ideas | Discover related keywords from seeds | Available |
+| Labs: bulk_keyword_difficulty | Difficulty scores for target keywords | Available |
+| Labs: keywords_for_site | What keywords a domain ranks for | Available (not tested) |
+| Labs: ranked_keywords | Competitor keyword rankings | Available (not tested) |
+| SERP: organic_live_advanced | Live search result pages | Available (not tested) |
+| Content Analysis: summary | Topic and mention trends | Available (not tested) |
+| AI Optimization: LLM mentions | Track what LLMs say about RevenueCat | Needs paid plan upgrade |
+| AI Optimization: LLM response | Query specific LLM models | Needs paid plan upgrade |
+
+The AI Optimization endpoints are the highest-value upgrade. They enable monitoring what ChatGPT, Perplexity, Claude, and Gemini say about RevenueCat -- critical for AEO/GEO strategy.
+
+### Marketing Skills
+
+Core operating skills integrated into GrowthCat's operating loop:
+
+| Skill | Purpose |
 | --- | --- |
-| ai-seo (AEO/GEO optimization) | Applied to every piece: extractable passages, FAQ blocks, schema markup, citation signals |
+| ai-seo (AEO/GEO optimization) | Extractable passages, FAQ blocks, schema markup, citation signals |
 | content-strategy | Weekly topic planning from evidence-backed opportunity scoring |
 | social-content | X/LinkedIn distribution for 50+ meaningful interactions per week |
-| ab-test-setup | Experiment design with hypothesis, baseline, target, confidence, and stop condition |
+| ab-test-setup | Experiment design with hypothesis, baseline, target, confidence, stop condition |
 | analytics-tracking | Measurement framework for content performance and experiment results |
-| schema-markup | Structured data on all published pages for search engine understanding |
+| schema-markup | Structured data on all published pages |
+| paywall-upgrade-cro | Content about paywalls, upgrade flow optimization |
+| churn-prevention | Retention content grounded in subscriber lifecycle data |
+| pricing-strategy | Subscription pricing content for agent-built apps |
 
-### RevenueCat domain skills
+---
 
-| Skill | Purpose in GrowthCat |
+## Implementation Status
+
+### Built and Working
+
+- Chat widget with streaming responses (Vercel AI SDK `streamText`)
+- Panel console with SSE streaming (SSE fixed, token auth working)
+- All public pages: landing, application, proof-pack, articles, readiness-review, operator-replay
+- All operator pages: dashboard, pipeline, community, experiments, feedback, report, onboarding, panel
+- Convex schema (deployed): 8 tables with indexes, text search, vector search
+- Convex queries, mutations, actions, cron jobs, HTTP endpoints (7 authenticated)
+- Inngest functions (8 defined): weekly planning, content generation, content publishing, feedback pipeline, community monitor, experiment runner, weekly report, Slack handler
+- Connectors (5): DataForSEO, Slack, Typefully, GitHub, RevenueCat
+- Prompt templates (7): blog post, growth analysis, feedback report, experiment brief, weekly report, social post, panel response
+- Quality gates config (8 gates defined)
+- Security model (bearer auth, HMAC, token auth, SDK signing, fail-closed)
+- Agent network definition (5 agents with deterministic router)
+- Voice profile and strategy config
+
+### Built but Needs API Keys to Activate
+
+- Content pipeline (end-to-end generation through quality gates to publishing)
+- Feedback pipeline (community signals to structured feedback to GitHub Issues)
+- Community monitor (GitHub issue scanner, every 6h)
+- Slack bot (event handler with HMAC verification, background processing via Inngest)
+- Typefully distribution (multi-platform social posting with dedup)
+- CMS publishing (markdown commit to GitHub with frontmatter)
+- Issue filing (structured feedback as GitHub Issues)
+
+### NOT BUILT (Critical Path)
+
+- **Knowledge ingestion pipeline**: crawl RC docs/SDKs/blog/changelog, chunk, embed, store in Convex sources table. Without this, RAG has no knowledge to retrieve.
+- **Convex Agent replacing raw streamText**: chat widget and panel currently use raw `streamText`. Need to replace with Convex Agent for persistent threads, message history, tool calling, and RAG on every response.
+- **RAG on every response**: vector search + text search + cross-thread search before responding. Currently the chat and panel respond without grounding context.
+- **Experiment measurement**: the experiment runner can create experiments but cannot yet measure results after 7 days (needs DataForSEO baseline/comparison).
+- **Onboarding persistence**: the onboarding page UI exists but does not yet save RC's credentials to Convex.
+- **Self-optimization loop**: measure own performance, analyze what worked, adjust allocation. Currently defined in config but not wired to execution.
+
+### NOT BUILT (Nice to Have)
+
+- Cross-thread memory (agent remembers context from past conversations across threads)
+- Competitive intelligence monitoring (automated crawl of Adapty/Superwall/Qonversion docs)
+- AI mention monitoring via DataForSEO AI Optimization (needs paid plan upgrade)
+- Programmatic SEO page generation
+- Agent SDK wrapper package
+- CLI bootstrapping tool
+
+---
+
+## Architecture Overview
+
+```
+Next.js 15 (App Router) -- single framework: UI + API routes + SSE streaming + static pages
+├── Convex Agent (@convex-dev/agent) -- THE BRAIN: threads, messages, RAG, tool calling
+├── Inngest + AgentKit -- THE HANDS: durable functions, multi-agent orchestration
+├── Convex -- reactive database + cron + file storage + vector search + text search + HTTP actions
+├── Connectors (native fetch)
+│   ├── Typefully -- multi-platform social distribution (X, LinkedIn, Threads, Bluesky, Mastodon)
+│   ├── Slack Web API -- internal team communication
+│   ├── GitHub REST API -- code artifacts, PRs, issues
+│   ├── RevenueCat REST API v2 -- product data
+│   └── DataForSEO REST API -- market intelligence
+├── Vercel AI SDK -- LLM streaming (streamText, generateText, tool definitions)
+├── Tailwind CSS v4 -- styling
+└── Single Bun runtime
+```
+
+### Why This Stack
+
+| Concern | Solution |
 | --- | --- |
-| paywall-upgrade-cro | Content about paywalls, RevenueCat's core product -- upgrade flow optimization |
-| churn-prevention | Retention content grounded in RevenueCat subscriber lifecycle data |
-| pricing-strategy | Subscription pricing content for agent-built apps using RevenueCat offerings |
+| Runtimes | 1 (Bun) |
+| Frameworks | 3 (Next.js + Inngest + Convex) |
+| Agent brain | Convex Agent (@convex-dev/agent) for threads, RAG, tool calling |
+| Agent orchestration | Inngest AgentKit with createNetwork, createAgent, createTool |
+| Database | Convex (schema, queries, mutations, zero migrations) |
+| Real-time dashboard | Convex reactive queries (live updates, no polling) |
+| LLM streaming | Vercel AI SDK streamText() with React hooks |
+| File storage | Convex built-in file storage |
+| Cron and scheduling | Convex cronJobs() + Inngest scheduled functions |
+| Type safety | End-to-end TypeScript (DB schema to API to UI) |
+| Deploy complexity | Single Next.js deploy + Convex (managed) + Inngest (managed) |
 
-### Application improvement skills
+### File Structure
 
-| Skill | Purpose in GrowthCat |
-| --- | --- |
-| page-cro | Microsite conversion optimization (application letter engagement) |
-| copywriting | Content quality across all artifacts -- voice consistency, clarity, persuasion |
-| seo-audit | Technical SEO health of the microsite and published content |
-| product-marketing-context | Positioning GrowthCat within the RevenueCat ecosystem and competitive landscape |
+```
+app/                              # Next.js App Router
+├── (public)/                     # Public microsite pages
+│   ├── page.tsx                  # Landing / application letter
+│   ├── application/page.tsx      # Full application
+│   ├── proof-pack/page.tsx
+│   ├── articles/
+│   ├── readiness-review/page.tsx
+│   └── operator-replay/page.tsx
+├── (operator)/                   # Operator console (dark theme)
+│   ├── dashboard/page.tsx
+│   ├── panel/page.tsx            # Live panel console
+│   ├── pipeline/page.tsx
+│   ├── community/page.tsx
+│   ├── experiments/page.tsx
+│   ├── feedback/page.tsx
+│   ├── report/page.tsx
+│   ├── onboarding/page.tsx       # Self-service onboarding for RevenueCat
+│   └── hooks/useConvexSafe.ts
+├── api/                          # API routes
+│   ├── chat/route.ts             # Chat widget endpoint
+│   ├── panel/session/route.ts    # SSE streaming endpoint
+│   ├── slack/events/route.ts     # Slack event handler
+│   └── inngest/route.ts          # Inngest webhook handler
+├── components/
+│   └── Chat.tsx                  # Chat widget component
+├── layout.tsx
+└── globals.css
+
+inngest/                          # Inngest functions and handlers
+├── client.ts
+├── functions.ts                  # 6 core functions
+├── slack-handler.ts
+└── community-monitor.ts
+
+convex/                           # Convex backend
+├── schema.ts
+├── artifacts.ts
+├── workflowRuns.ts
+├── experiments.ts
+├── feedbackItems.ts
+├── opportunities.ts
+├── community.ts
+├── weeklyReports.ts
+├── sources.ts                    # Vector search for RAG
+├── crons.ts
+├── http.ts                       # Authenticated HTTP endpoints
+└── convex.config.ts              # @convex-dev/agent config
+
+agents/                           # Inngest AgentKit
+├── network.ts
+├── planner.ts
+├── content.ts
+├── growth.ts
+├── feedback.ts
+├── community.ts
+└── tools/
+    ├── dataforseo.ts
+    ├── slack.ts
+    ├── typefully.ts
+    ├── github.ts
+    ├── revenuecat.ts
+    ├── quality-gates.ts
+    └── scoring.ts
+
+lib/                              # Shared utilities
+├── config/
+│   ├── voice.ts
+│   ├── quality.ts
+│   ├── strategy.ts
+│   └── growth.ts
+├── connectors/
+│   ├── dataforseo.ts
+│   ├── slack.ts
+│   ├── typefully.ts
+│   ├── github.ts
+│   └── revenuecat.ts
+├── convex-client.ts              # HTTP client for Inngest → Convex
+├── cms/
+│   └── publish.ts
+├── feedback/
+│   └── file-issue.ts
+└── content/
+    └── prompts/
+        ├── blog-post.ts
+        ├── growth-analysis.ts
+        ├── feedback-report.ts
+        ├── experiment-brief.ts
+        ├── weekly-report.ts
+        ├── social-post.ts
+        └── panel-response.ts
+```
+
+---
 
 ## Open Decisions
 
@@ -1065,6 +736,11 @@ These marketing skills should be integrated into GrowthCat's operating loop to p
 - [ ] DataForSEO plan upgrade for AI Optimization endpoints
 - [ ] Typefully account setup and social set configuration for GrowthCat identity
 - [ ] Which platforms to enable in Typefully (X only, X + LinkedIn, or all 5)
+- [ ] Embedding model choice (OpenAI text-embedding-3-small vs Anthropic voyage-3 vs Convex built-in)
+- [ ] Chunk size and overlap strategy for knowledge ingestion
+- [ ] How to handle Charts API if no REST endpoint exists (dashboard-only access post-hire?)
+- [ ] Review mode default: draft-only (RC reviews before publish) vs auto-publish with quality gates
+- [ ] Cross-thread memory scope: per-week vs all-time vs sliding window
 
 ## Risks
 
@@ -1075,11 +751,11 @@ These marketing skills should be integrated into GrowthCat's operating loop to p
 | Overbuilding post-hire surfaces before application is strong | Phase ordering enforces public proof before connected-mode work |
 | Confusing opportunity magnitude with evidence confidence | Explicit score components in opportunity scoring |
 | Dependence on private RevenueCat access too early | Public-only mode works before private connectors exist |
-| Careers page blocks automation (CAPTCHA/bot detection) | Fallback package with pre-filled URL; operator resolves only the blocking challenge |
 | Unsupported claims in published content | Grounding gate blocks publication until citation coverage passes threshold |
 | Duplicate content published as flagship | Novelty registry reroutes to docs PR, canonical answer, or derivative path |
 | Connector scopes too broad or leaked into prompts | Startup scope audit, secrets at connector boundary only, scoped service accounts |
 | Agent sounds generic or inconsistent | Versioned voice profile, public artifact linting, disclosure language enforcement |
+| No RAG = hallucination risk | Knowledge ingestion pipeline is the critical-path blocker; without it, responses are ungrounded |
 | Convex cold starts for actions | Warm critical actions via health-check cron; action code stays lean |
 | Inngest rate limits on free tier | Monitor usage; upgrade to paid tier before hitting limits; batch where possible |
 | Vendor lock-in with Convex | Mitigated: Convex is open source and can be self-hosted; schema is portable TypeScript |
