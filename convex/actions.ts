@@ -562,7 +562,6 @@ export const generateFeedback = internalAction({
             body: JSON.stringify({
               title: `[Feedback] ${topic}`,
               body: `## Product Feedback: ${topic}\n\nSeverity: ${severity}\n\n${result.text}\n\n---\n_Filed by GrowthRat autonomous feedback pipeline._`,
-              labels: ["feedback", "growthrat"],
             }),
           }
         );
