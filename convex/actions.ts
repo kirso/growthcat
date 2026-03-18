@@ -9,6 +9,7 @@ import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { RC_DOC_URLS, processPage } from "./crawler";
+import { WebClient } from "@slack/web-api";
 
 // ---------------------------------------------------------------------------
 // DataForSEO
@@ -358,7 +359,6 @@ export const postToSlack = internalAction({
     const token = process.env.SLACK_BOT_TOKEN;
     if (!token) return { posted: false };
 
-    const { WebClient } = await import("@slack/web-api");
     const client = new WebClient(token);
     const channel = process.env.SLACK_DEFAULT_CHANNEL ?? "growthrat";
 
