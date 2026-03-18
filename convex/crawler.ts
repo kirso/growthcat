@@ -27,72 +27,63 @@ export interface SourceChunk {
  * These are the most important pages for agent-developer knowledge.
  */
 export const RC_DOC_URLS: { url: string; key: string; topic: string }[] = [
-  // Core concepts
-  {
-    url: "https://www.revenuecat.com/docs/getting-started/quickstart",
-    key: "rc-docs:quickstart",
-    topic: "Getting started with RevenueCat",
-  },
-  {
-    url: "https://www.revenuecat.com/docs/getting-started/entitlements",
-    key: "rc-docs:entitlements",
-    topic: "RevenueCat entitlements and access control",
-  },
-  // API
-  {
-    url: "https://www.revenuecat.com/docs/api-v2",
-    key: "rc-docs:api-v2",
-    topic: "RevenueCat REST API v2 reference",
-  },
-  // Webhooks
-  {
-    url: "https://www.revenuecat.com/docs/integrations/webhooks",
-    key: "rc-docs:webhooks",
-    topic: "RevenueCat webhook integration",
-  },
-  {
-    url: "https://www.revenuecat.com/docs/integrations/webhooks/event-types-and-fields",
-    key: "rc-docs:webhook-events",
-    topic: "RevenueCat webhook event types and payload fields",
-  },
-  // Offerings & Products
-  {
-    url: "https://www.revenuecat.com/docs/offerings",
-    key: "rc-docs:offerings",
-    topic: "RevenueCat offerings configuration",
-  },
-  {
-    url: "https://www.revenuecat.com/docs/entitlements",
-    key: "rc-docs:entitlements-guide",
-    topic: "RevenueCat entitlements guide",
-  },
-  // SDKs
-  {
-    url: "https://www.revenuecat.com/docs/ios-native/installation",
-    key: "rc-docs:sdk-ios",
-    topic: "RevenueCat iOS SDK installation",
-  },
-  {
-    url: "https://www.revenuecat.com/docs/android-native/installation",
-    key: "rc-docs:sdk-android",
-    topic: "RevenueCat Android SDK installation",
-  },
-  {
-    url: "https://www.revenuecat.com/docs/reactnative/installation",
-    key: "rc-docs:sdk-react-native",
-    topic: "RevenueCat React Native SDK installation",
-  },
-  {
-    url: "https://www.revenuecat.com/docs/flutter/installation",
-    key: "rc-docs:sdk-flutter",
-    topic: "RevenueCat Flutter SDK installation",
-  },
-  // Testing
-  {
-    url: "https://www.revenuecat.com/docs/test-and-launch/sandbox",
-    key: "rc-docs:sandbox",
-    topic: "RevenueCat sandbox and testing",
-  },
+  // ── Getting Started ──
+  { url: "https://www.revenuecat.com/docs/getting-started/quickstart", key: "rc-docs:quickstart", topic: "Getting started with RevenueCat" },
+  { url: "https://www.revenuecat.com/docs/getting-started/entitlements", key: "rc-docs:entitlements", topic: "RevenueCat entitlements and access control" },
+  { url: "https://www.revenuecat.com/docs/projects/overview", key: "rc-docs:projects", topic: "RevenueCat projects overview" },
+  { url: "https://www.revenuecat.com/docs/projects/collaborators", key: "rc-docs:collaborators", topic: "RevenueCat project collaborators and permissions" },
+
+  // ── Products & Offerings ──
+  { url: "https://www.revenuecat.com/docs/offerings", key: "rc-docs:offerings", topic: "RevenueCat offerings configuration" },
+  { url: "https://www.revenuecat.com/docs/entitlements", key: "rc-docs:entitlements-guide", topic: "RevenueCat entitlements guide" },
+  { url: "https://www.revenuecat.com/docs/subscription-guidance/subscription-offers", key: "rc-docs:subscription-offers", topic: "RevenueCat subscription offers and promotions" },
+
+  // ── Customers ──
+  { url: "https://www.revenuecat.com/docs/customers/customer-info", key: "rc-docs:customer-info", topic: "RevenueCat CustomerInfo object and subscriber attributes" },
+  { url: "https://www.revenuecat.com/docs/customers/user-ids", key: "rc-docs:user-ids", topic: "RevenueCat user identification and app user IDs" },
+
+  // ── Making Purchases ──
+  { url: "https://www.revenuecat.com/docs/making-purchases", key: "rc-docs:purchases", topic: "Making purchases with RevenueCat SDKs" },
+  { url: "https://www.revenuecat.com/docs/subscription-guidance/managing-subscriptions", key: "rc-docs:managing-subs", topic: "Managing subscriptions with RevenueCat" },
+
+  // ── Paywalls ──
+  { url: "https://www.revenuecat.com/docs/tools/paywalls", key: "rc-docs:paywalls", topic: "RevenueCat Paywalls — remote paywall configuration" },
+  { url: "https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls", key: "rc-docs:creating-paywalls", topic: "Creating and configuring RevenueCat paywalls" },
+
+  // ── API v2 ──
+  { url: "https://www.revenuecat.com/docs/api-v2", key: "rc-docs:api-v2", topic: "RevenueCat REST API v2 reference" },
+
+  // ── Webhooks ──
+  { url: "https://www.revenuecat.com/docs/integrations/webhooks", key: "rc-docs:webhooks", topic: "RevenueCat webhook integration" },
+  { url: "https://www.revenuecat.com/docs/integrations/webhooks/event-types-and-fields", key: "rc-docs:webhook-events", topic: "RevenueCat webhook event types and payload fields" },
+
+  // ── Charts & Analytics ──
+  { url: "https://www.revenuecat.com/docs/dashboard-and-metrics/charts", key: "rc-docs:charts", topic: "RevenueCat Charts — subscription analytics dashboard" },
+  { url: "https://www.revenuecat.com/docs/dashboard-and-metrics/customer-lists", key: "rc-docs:customer-lists", topic: "RevenueCat customer lists and segments" },
+
+  // ── SDKs ──
+  { url: "https://www.revenuecat.com/docs/ios-native/installation", key: "rc-docs:sdk-ios", topic: "RevenueCat iOS SDK installation" },
+  { url: "https://www.revenuecat.com/docs/android-native/installation", key: "rc-docs:sdk-android", topic: "RevenueCat Android SDK installation" },
+  { url: "https://www.revenuecat.com/docs/reactnative/installation", key: "rc-docs:sdk-react-native", topic: "RevenueCat React Native SDK installation" },
+  { url: "https://www.revenuecat.com/docs/flutter/installation", key: "rc-docs:sdk-flutter", topic: "RevenueCat Flutter SDK installation" },
+  { url: "https://www.revenuecat.com/docs/web/web-sdk", key: "rc-docs:sdk-web", topic: "RevenueCat Web SDK for browser and server" },
+  { url: "https://www.revenuecat.com/docs/unity/installation", key: "rc-docs:sdk-unity", topic: "RevenueCat Unity SDK installation" },
+
+  // ── Testing & Launch ──
+  { url: "https://www.revenuecat.com/docs/test-and-launch/sandbox", key: "rc-docs:sandbox", topic: "RevenueCat sandbox and testing" },
+  { url: "https://www.revenuecat.com/docs/test-and-launch/launch-checklist", key: "rc-docs:launch-checklist", topic: "RevenueCat launch checklist" },
+
+  // ── Integrations ──
+  { url: "https://www.revenuecat.com/docs/integrations/attribution/branch", key: "rc-docs:integration-branch", topic: "RevenueCat Branch integration" },
+  { url: "https://www.revenuecat.com/docs/integrations/scheduled-data-exports", key: "rc-docs:data-exports", topic: "RevenueCat scheduled data exports" },
+
+  // ── Migration ──
+  { url: "https://www.revenuecat.com/docs/migrating-to-revenuecat/migration-overview", key: "rc-docs:migration", topic: "Migrating to RevenueCat from other billing systems" },
+
+  // ── Platform-specific ──
+  { url: "https://www.revenuecat.com/docs/getting-started/configuring-sdk/ios-app-store", key: "rc-docs:config-ios", topic: "Configuring RevenueCat for iOS App Store" },
+  { url: "https://www.revenuecat.com/docs/getting-started/configuring-sdk/google-play-store", key: "rc-docs:config-android", topic: "Configuring RevenueCat for Google Play Store" },
+  { url: "https://www.revenuecat.com/docs/getting-started/configuring-sdk/stripe", key: "rc-docs:config-stripe", topic: "Configuring RevenueCat with Stripe for web" },
 ];
 
 /**

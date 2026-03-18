@@ -3,6 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useRef, useEffect, useState, useMemo } from "react";
+import Markdown from "react-markdown";
 
 const SUGGESTED_PROMPTS = [
   "What would you do in your first week at RevenueCat?",
@@ -14,7 +15,10 @@ const SUGGESTED_PROMPTS = [
 
 export function Chat() {
   const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
-  const { messages, sendMessage, status, error } = useChat({ transport });
+  const { messages, sendMessage, status, error } = useChat({
+    transport,
+    experimental_throttle: 50,
+  });
   const isLoading = status === "streaming" || status === "submitted";
   const [inputValue, setInputValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -129,12 +133,45 @@ export function Chat() {
               {m.role === "assistant" && (
                 <span className="text-xs mr-1">🐭</span>
               )}
-              <span className="whitespace-pre-wrap">
-                {m.parts
-                  ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
-                  .map((p) => p.text)
-                  .join("") || ""}
-              </span>
+              {m.role === "assistant" ? (
+                <Markdown
+                  components={{
+                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                    li: ({ children }) => <li className="mb-0.5">{children}</li>,
+                    code: ({ children, className }) => {
+                      const isBlock = className?.includes("language-");
+                      return isBlock ? (
+                        <pre className="bg-black/5 rounded p-2 overflow-x-auto my-2 text-xs"><code>{children}</code></pre>
+                      ) : (
+                        <code className="bg-black/5 rounded px-1 py-0.5 text-xs">{children}</code>
+                      );
+                    },
+                    strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                    a: ({ children, href }) => (
+                      <a href={href} target="_blank" rel="noopener noreferrer" className="text-[var(--color-gc-primary)] underline">
+                        {children}
+                      </a>
+                    ),
+                    h1: ({ children }) => <h3 className="font-semibold text-sm mt-3 mb-1">{children}</h3>,
+                    h2: ({ children }) => <h3 className="font-semibold text-sm mt-3 mb-1">{children}</h3>,
+                    h3: ({ children }) => <h3 className="font-semibold text-sm mt-2 mb-1">{children}</h3>,
+                  }}
+                >
+                  {m.parts
+                    ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+                    .map((p) => p.text)
+                    .join("") || ""}
+                </Markdown>
+              ) : (
+                <span className="whitespace-pre-wrap">
+                  {m.parts
+                    ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+                    .map((p) => p.text)
+                    .join("") || ""}
+                </span>
+              )}
             </div>
           </div>
         ))}
