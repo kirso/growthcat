@@ -167,6 +167,42 @@ export const generateContent = internalAction({
 });
 
 // ---------------------------------------------------------------------------
+// Task Decomposition (Stage 2: Take-Home)
+// ---------------------------------------------------------------------------
+
+export const decomposeTask = internalAction({
+  args: { taskPrompt: v.string(), deadline: v.string() },
+  handler: async (_ctx, { taskPrompt, deadline }) => {
+    const { generateText } = await import("ai");
+    const { anthropic } = await import("@ai-sdk/anthropic");
+
+    const result = await generateText({
+      model: anthropic("claude-sonnet-4-20250514"),
+      system: `You are GrowthRat's task planner. Given a task prompt, decompose it into concrete subtasks. Output valid JSON only, no markdown.`,
+      prompt: `Task: ${taskPrompt}\nDeadline: ${deadline}\n\nDecompose into subtasks. Return JSON:\n{"contentTasks": [{"topic": "...", "keyword": "..."}], "growthStrategy": {"topic": "...", "keyword": "..."} | null, "reasoning": "..."}`,
+      maxOutputTokens: 1000,
+      temperature: 0.2,
+    });
+
+    try {
+      const parsed = JSON.parse(result.text.replace(/```json?\n?/g, "").replace(/```/g, "").trim());
+      return {
+        contentTasks: parsed.contentTasks ?? [],
+        growthStrategy: parsed.growthStrategy ?? null,
+        reasoning: parsed.reasoning ?? "",
+      };
+    } catch {
+      // Fallback: single content task from the prompt
+      return {
+        contentTasks: [{ topic: taskPrompt, keyword: taskPrompt.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().split(" ").slice(0, 4).join(" ") }],
+        growthStrategy: null,
+        reasoning: "Failed to parse LLM decomposition, using prompt as single task.",
+      };
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Quality Validation
 // ---------------------------------------------------------------------------
 

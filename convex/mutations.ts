@@ -263,6 +263,13 @@ export const startContentGen = internalMutation({
   },
 });
 
+export const startTaskExecution = internalMutation({
+  args: { taskPrompt: v.string(), deadline: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await workflow.start(ctx, internal.workflows.taskExecution.executeTask, args);
+  },
+});
+
 export const startExperimentRunner = internalMutation({
   args: {
     experimentKey: v.string(),
