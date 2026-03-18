@@ -1,7 +1,6 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { streamText } from "ai";
+import { streamText, UIMessage, convertToModelMessages } from "ai";
 import { GROWTHCAT_VOICE_PROFILE } from "@/lib/config/voice";
-import { fetchQuery } from "convex/nextjs";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -33,11 +32,13 @@ Be direct and specific. Show technical depth about RevenueCat. Keep responses co
 ${GROWTHCAT_VOICE_PROFILE.disclosureLine}`;
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  const { messages }: { messages: UIMessage[] } = await req.json();
 
   // Extract the latest user message for RAG query
-  const lastUserMessage = [...messages].reverse().find((m: { role: string }) => m.role === "user");
-  const query = lastUserMessage?.content ?? "";
+  const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+  const query = typeof lastUserMessage?.content === "string"
+    ? lastUserMessage.content
+    : lastUserMessage?.parts?.filter((p): p is { type: "text"; text: string } => p.type === "text").map((p) => p.text).join("") ?? "";
 
   // RAG: search Convex sources table for relevant RC docs
   let ragContext = "";
@@ -57,12 +58,12 @@ export async function POST(req: Request) {
   const result = streamText({
     model: anthropic("claude-sonnet-4-20250514"),
     system: systemPrompt,
-    messages,
+    messages: await convertToModelMessages(messages),
     maxOutputTokens: 2048,
     temperature: 0.4,
   });
 
-  return result.toTextStreamResponse();
+  return result.toUIMessageStreamResponse();
 }
 
 /**
