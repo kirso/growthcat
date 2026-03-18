@@ -122,44 +122,35 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="space-y-6">
+        <div className="grid md:grid-cols-3 gap-6">
           {findings.map((f) => (
             <div
               key={f.number}
-              className="rounded-xl border border-[var(--color-rc-border)] hover:shadow-[var(--shadow-card)] transition-all overflow-hidden"
+              className="group rounded-xl border border-[var(--color-rc-border)] hover:border-[var(--color-gc-primary)]/30 hover:shadow-[var(--shadow-card)] transition-all p-6 flex flex-col"
             >
-              <div className="flex flex-col md:flex-row">
-                <div className="md:w-16 shrink-0 bg-[var(--color-rc-surface)] flex items-center justify-center py-4 md:py-0">
-                  <span className="text-2xl font-bold text-[var(--color-gc-primary)]/40">{f.number}</span>
-                </div>
-                <div className="flex-1 p-6">
-                  <h3 className="font-semibold text-lg text-[var(--color-rc-dark)] mb-3">
-                    {f.title}
-                  </h3>
-                  <div className="grid sm:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <div className="text-xs font-semibold text-[var(--color-rc-muted)] uppercase tracking-wider mb-1">Problem</div>
-                      <p className="text-sm text-[var(--color-rc-muted)] leading-relaxed">{f.problem}</p>
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-[var(--color-gc-primary)] uppercase tracking-wider mb-1">Impact</div>
-                      <p className="text-sm text-[var(--color-rc-muted)] leading-relaxed">{f.impact}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <Link
-                      href={f.href}
-                      className="text-sm font-medium text-[var(--color-gc-primary)] hover:text-[var(--color-gc-primary-hover)] no-underline transition-colors"
-                    >
-                      Read full report →
-                    </Link>
-                    <SuggestedPrompt prompt={f.chatPrompt}>
-                      <span className="text-sm font-medium text-[var(--color-rc-muted)] hover:text-[var(--color-rc-dark)] cursor-pointer transition-colors">
-                        Ask me about this ↗
-                      </span>
-                    </SuggestedPrompt>
-                  </div>
-                </div>
+              <span className="text-xs font-bold text-[var(--color-gc-primary)]/50 mb-3">FINDING {f.number}</span>
+              <h3 className="font-semibold text-[var(--color-rc-dark)] leading-snug mb-3">
+                {f.title}
+              </h3>
+              <p className="text-sm text-[var(--color-rc-muted)] leading-relaxed mb-2">
+                {f.problem}
+              </p>
+              <p className="text-sm text-[var(--color-rc-dark)]/70 leading-relaxed mb-5 flex-1">
+                <span className="font-medium text-[var(--color-gc-primary)]">Impact:</span>{" "}
+                {f.impact}
+              </p>
+              <div className="flex items-center gap-4 pt-4 border-t border-[var(--color-rc-border)]">
+                <Link
+                  href={f.href}
+                  className="text-sm font-medium text-[var(--color-gc-primary)] hover:text-[var(--color-gc-primary-hover)] no-underline transition-colors"
+                >
+                  Full report →
+                </Link>
+                <SuggestedPrompt prompt={f.chatPrompt}>
+                  <span className="text-sm text-[var(--color-rc-muted)] hover:text-[var(--color-rc-dark)] cursor-pointer transition-colors">
+                    Ask me ↗
+                  </span>
+                </SuggestedPrompt>
               </div>
             </div>
           ))}
