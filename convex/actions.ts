@@ -494,6 +494,18 @@ export const startContentWorkflow = internalAction({
   },
 });
 
+export const startExperimentWorkflow = internalAction({
+  args: {
+    experimentKey: v.string(),
+    hypothesis: v.string(),
+    targetKeyword: v.string(),
+    contentSlug: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.runMutation(internal.mutations.startExperimentRunner, args);
+  },
+});
+
 export const startFeedbackWorkflow = internalAction({
   args: { topics: v.array(v.string()) },
   handler: async (ctx, { topics }): Promise<{ triggered: boolean; count: number }> => {
@@ -523,14 +535,47 @@ export const generateFeedback = internalAction({
     });
 
     // Store in Convex
-    await ctx.runMutation(internal.mutations.createFeedbackItem, {
+    const feedbackId = await ctx.runMutation(internal.mutations.createFeedbackItem, {
       title: topic,
       problem: result.text,
       status: "draft",
       metadata: { severity, generatedTokens: result.usage?.outputTokens ?? 0 },
     });
 
-    return { title: topic, length: result.text.length };
+    // File as GitHub Issue
+    const token = process.env.GITHUB_TOKEN;
+    const owner = process.env.GITHUB_OWNER ?? "kirso";
+    const repo = process.env.GITHUB_CONTENT_REPO ?? "growthcat";
+    let issueUrl = "";
+
+    if (token) {
+      try {
+        const issueRes = await fetch(
+          `https://api.github.com/repos/${owner}/${repo}/issues`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/vnd.github+json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              title: `[Feedback] ${topic}`,
+              body: `## Product Feedback: ${topic}\n\nSeverity: ${severity}\n\n${result.text}\n\n---\n_Filed by GrowthRat autonomous feedback pipeline._`,
+              labels: ["feedback", "growthrat"],
+            }),
+          }
+        );
+        if (issueRes.ok) {
+          const issueData = await issueRes.json();
+          issueUrl = issueData.html_url;
+        }
+      } catch {
+        // GitHub Issue filing failed — continue without it
+      }
+    }
+
+    return { title: topic, length: result.text.length, issueUrl };
   },
 });
 

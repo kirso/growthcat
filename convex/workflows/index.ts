@@ -67,6 +67,19 @@ export const weeklyPlanWorkflow = workflow.define({
       { topics: plan.feedbackTopics }
     );
 
+    // Step 6: Start experiment for the third-ranked keyword
+    if (plan.experimentTopic) {
+      await step.runAction(
+        internal.actions.startExperimentWorkflow,
+        {
+          experimentKey: `exp-w${weekNumber}-${plan.experimentTopic.replace(/\s+/g, "-").slice(0, 30)}`,
+          hypothesis: `Publishing targeted content for "${plan.experimentTopic}" will achieve search indexing within 14 days`,
+          targetKeyword: plan.experimentTopic,
+          contentSlug: plan.experimentTopic.replace(/\s+/g, "-"),
+        }
+      );
+    }
+
     return { weekNumber, topicsPlanned: plan.contentTopics.length };
   },
 });
@@ -96,38 +109,56 @@ export const contentGenWorkflow = workflow.define({
       { content: draft.content, artifactId }
     );
 
-    // Step 3: If validated, publish and distribute
+    // Step 3: If validated, post for Slack approval then publish
     if (validation.allPassed) {
       await step.runMutation(
         internal.mutations.updateArtifactStatus,
         { id: artifactId, status: "validated" }
       );
 
-      // Publish to CMS
-      await step.runAction(
-        internal.actions.publishToCMS,
-        { artifactId },
+      // Post to Slack for approval (auto-approves if no Slack token)
+      const approval = await step.runAction(
+        internal.slackApproval.postForApproval,
+        {
+          artifactId,
+          title: topic,
+          slug: targetKeyword.replace(/\s+/g, "-"),
+          contentPreview: draft.content.slice(0, 500),
+          qualityGates: validation.gates.map((g: { key: string; passed: boolean }) => g.passed ? `${g.key}` : `~${g.key}~`).join(", "),
+        },
         { retry: true }
       );
 
-      // Distribute via Typefully
-      await step.runAction(
-        internal.actions.distributeViaTypefully,
-        { artifactId, topic },
-        { retry: true }
-      );
+      // If auto-approved (no Slack) or we don't wait for reaction, proceed to publish
+      // In production with Slack, the reaction handler triggers publishing separately
+      // For now: publish immediately after posting for approval
+      if (approval.autoApproved || approval.posted) {
+        // Publish to CMS
+        await step.runAction(
+          internal.actions.publishToCMS,
+          { artifactId },
+          { retry: true }
+        );
 
-      // Distribute via GitHub
-      await step.runAction(
-        internal.actions.distributeViaGitHub,
-        { artifactId: draft.artifactId as Id<"artifacts">, title: topic, slug: targetKeyword.replace(/\s+/g, "-"), content: draft.content },
-        { retry: true }
-      );
+        // Distribute via Typefully
+        await step.runAction(
+          internal.actions.distributeViaTypefully,
+          { artifactId, topic },
+          { retry: true }
+        );
 
-      await step.runMutation(
-        internal.mutations.updateArtifactStatus,
-        { id: artifactId, status: "published" }
-      );
+        // Distribute via GitHub
+        await step.runAction(
+          internal.actions.distributeViaGitHub,
+          { artifactId: draft.artifactId as Id<"artifacts">, title: topic, slug: targetKeyword.replace(/\s+/g, "-"), content: draft.content },
+          { retry: true }
+        );
+
+        await step.runMutation(
+          internal.mutations.updateArtifactStatus,
+          { id: artifactId, status: "published" }
+        );
+      }
     } else {
       await step.runMutation(
         internal.mutations.updateArtifactStatus,
