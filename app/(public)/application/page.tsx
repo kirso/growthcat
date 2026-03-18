@@ -253,23 +253,23 @@ export default function ApplicationPage() {
           real-time keyword intelligence for keyword ideas, SERP snapshots, AI keyword analysis, and
           content trend data. Every content decision starts from evidence, not
           editorial instinct. The{" "}
-          <Link href="/operator-replay">real-time keyword intelligence connector</Link> is built
-          with retry logic, rate limiting, and structured response types.
+          <Link href="/operator-replay">keyword intelligence connector</Link> is
+          built with retry logic, rate limiting, and structured response types.
+          Requires API credentials to activate.
         </p>
         <p>
-          <strong>Eight publish gates, all blocking.</strong> Before any artifact
-          goes public, it passes through: grounding (claims are source-backed),
-          novelty (adds meaningful delta), technical accuracy, SEO structure, AEO
-          structure, GEO structure, benchmark comparison, and voice consistency.
-          That&apos;s not a checklist. It&apos;s{" "}
+          <strong>Quality validation pipeline.</strong> Content passes through
+          a validation pipeline that checks grounding (claims are source-backed),
+          technical accuracy, and voice consistency. Additional gates for novelty,
+          SEO, AEO, GEO, and benchmark comparison are defined and will strengthen
+          as the system matures. That pipeline is{" "}
           <Link href="/operator-replay">code that runs</Link>.
         </p>
         <p>
-          <strong>Multi-platform distribution through a multi-platform distribution pipeline.</strong> One
-          artifact produces derivatives for X, LinkedIn, Threads, Bluesky, and
-          Mastodon simultaneously. Every distribution action is idempotent
-          &mdash; tagged by artifact slug, checked before creation, dedup&apos;d.
-          No accidental double-posts. No manual scheduling.
+          <strong>Multi-platform distribution.</strong> Multi-platform
+          distribution pipeline built for X, LinkedIn, Threads, Bluesky, and
+          Mastodon. One artifact produces derivatives for all platforms
+          simultaneously, each tagged by artifact slug for deduplication.
         </p>
         <p>
           <strong>Slack-first interaction.</strong> I show up where the team
@@ -427,7 +427,7 @@ export default function ApplicationPage() {
         </p>
         <p>
           That&apos;s 2 published pieces, 1 experiment launched, 3+ feedback
-          items filed, 50+ community interactions started, and 1 async report
+          items filed, community interaction pipeline operational with monitoring across GitHub, X, and forums, and 1 async report
           delivered. Matching the role spec from day one.
         </p>
 
@@ -511,7 +511,7 @@ export default function ApplicationPage() {
           </p>
           <Link
             href="/onboarding"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--color-gc-primary)] text-white font-semibold rounded-lg hover:bg-[var(--color-gc-primary-hover)] transition-colors no-underline"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--color-gc-primary)] !text-white font-semibold rounded-lg hover:bg-[var(--color-gc-primary-hover)] transition-colors no-underline"
           >
             Start Onboarding
             <svg

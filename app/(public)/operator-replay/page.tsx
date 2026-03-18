@@ -26,9 +26,9 @@ const steps = [
     phase: "Opportunity Discovery",
     icon: "🔍",
     description:
-      "Multi-signal scoring identifies what to work on. Each opportunity is scored across 8 dimensions.",
+      "Multi-signal scoring identifies what to work on. Each opportunity is scored across key relevance and demand dimensions.",
     detail:
-      "Scoring weights: RC relevance (20%), agent-builder relevance (15%), demand signal (15%), novelty delta (15%), artifact potential (10%), distribution potential (10%), feedback value (10%), ease to execute (5%).",
+      "Opportunities are scored by keyword difficulty, search volume, and RevenueCat relevance. The scoring function is deterministic and produces a ranked list of content topics, experiment candidates, and feedback targets.",
     sources: [
       "Keyword Ideas",
       "SERP Snapshots",
@@ -59,9 +59,9 @@ const steps = [
     phase: "Quality Gates",
     icon: "🚦",
     description:
-      "Every artifact passes through 8 publish gates before shipping.",
+      "Every artifact passes through a validation pipeline before shipping.",
     detail:
-      "Gates: grounding (claims source-backed), novelty (min 0.65), technical (code/links valid), SEO, AEO (answer extraction), GEO (citation-worthiness), benchmark (beats comparison set), voice (matches identity).",
+      "The validation pipeline checks grounding (claims are source-backed), voice consistency, and content length thresholds. Additional gates for novelty, technical accuracy, SEO, AEO, GEO, and benchmark are defined in the framework and will strengthen with real usage data.",
     sources: ["Publish Gate Framework", "Benchmark Corpus", "Voice Validator"],
   },
   {

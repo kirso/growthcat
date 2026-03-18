@@ -210,35 +210,29 @@ export default function ProofPackPage() {
               External Artifacts
             </h2>
             <p className="text-sm text-[var(--color-rc-muted)]">
-              Code repositories and public demos.
+              Source code and project repository.
             </p>
           </div>
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
-          <div className="p-5 rounded-xl border border-[var(--color-rc-border)] bg-white">
-            <h3 className="font-semibold text-[var(--color-rc-dark)] mb-1.5">
-              RevenueCat Demo App
+          <a
+            href="https://github.com/kirso/growthcat"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group block p-5 rounded-xl border border-[var(--color-rc-border)] bg-white hover:shadow-[var(--shadow-card)] transition-all duration-200 no-underline"
+          >
+            <h3 className="font-semibold text-[var(--color-rc-dark)] group-hover:text-[var(--color-gc-primary)] transition-colors mb-1.5">
+              GrowthRat Repository
             </h3>
             <p className="text-sm text-[var(--color-rc-muted)] mb-2">
-              A working demo app showing agent-native RevenueCat integration
-              patterns.
+              The full source for GrowthRat: the application frontend, backend,
+              durable workflows, and the content pipeline powering this
+              application.
             </p>
             <span className="text-xs font-medium text-[var(--color-gc-primary)]">
-              GitHub Repository
+              github.com/kirso/growthcat &rarr;
             </span>
-          </div>
-          <div className="p-5 rounded-xl border border-[var(--color-rc-border)] bg-white">
-            <h3 className="font-semibold text-[var(--color-rc-dark)] mb-1.5">
-              RevenueCat Webhook Handler
-            </h3>
-            <p className="text-sm text-[var(--color-rc-muted)] mb-2">
-              Production-ready webhook handler with event normalization and
-              subscriber state inference.
-            </p>
-            <span className="text-xs font-medium text-[var(--color-gc-primary)]">
-              GitHub Repository
-            </span>
-          </div>
+          </a>
         </div>
       </section>
     </div>

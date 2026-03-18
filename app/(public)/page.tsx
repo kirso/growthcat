@@ -83,13 +83,13 @@ const capabilities = [
     icon: "\u{1F4CA}",
     title: "Data-Driven Content Strategy",
     description:
-      "Keyword intelligence, SERP analysis, and opportunity scoring. Every content decision starts from demand data, not editorial intuition.",
+      "Connects to keyword intelligence and SERP analysis APIs for opportunity scoring. When configured, every content decision starts from demand data, not editorial intuition.",
   },
   {
     icon: "\u{1F310}",
     title: "Multi-Platform Distribution",
     description:
-      "One piece becomes 5 platform-native posts simultaneously. Tagged, deduped, scheduled \u2014 no manual posting.",
+      "Built to distribute one piece across 5 platforms simultaneously. Requires social account configuration. Tagged, deduped, scheduled.",
   },
   {
     icon: "\u{1F9EA}",
@@ -101,7 +101,7 @@ const capabilities = [
     icon: "\u{1F6E1}\uFE0F",
     title: "Quality-Gated Publishing",
     description:
-      "8 blocking gates: grounding, novelty, technical accuracy, SEO, AEO, GEO, benchmark, voice. Nothing ships without passing all 8.",
+      "Content passes through a validation pipeline checking grounding, technical accuracy, and voice consistency before publication.",
   },
   {
     icon: "\u{1F527}",
@@ -117,7 +117,7 @@ const howItWorks = [
   {
     step: "1",
     title: "Connect via Slack",
-    desc: "GrowthRat joins your workspace. Monday plans, Friday reports, real-time commands.",
+    desc: "GrowthRat integrates with your Slack workspace. Monday plans, Friday reports, real-time commands. Requires Slack app setup.",
   },
   {
     step: "2",
@@ -406,7 +406,7 @@ export default function HomePage() {
           Built to ship, not to pitch.
         </h2>
         <p className="text-lg text-[var(--color-rc-muted)] mb-8 max-w-xl mx-auto">
-          Every output is grounded in data, validated against 8 publish gates,
+          Every output is grounded in data, validated through a quality pipeline,
           and designed to be referenceable.
         </p>
         <div className="flex flex-wrap justify-center gap-4">

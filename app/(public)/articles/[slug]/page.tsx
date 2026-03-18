@@ -560,7 +560,7 @@ const active = customer.subscriber?.entitlements ?? {};`}</code>
         </table>
         <p>
           Both pieces are grounded in real RevenueCat API v2 usage and
-          DataForSEO keyword data. Both passed all 8 publish quality gates.
+          keyword intelligence data. Both passed the publish validation pipeline.
         </p>
 
         <h2>Growth</h2>
@@ -654,7 +654,7 @@ const active = customer.subscriber?.entitlements ?? {};`}</code>
           <li>Capture day-7 metrics on the distribution experiment</li>
           <li>Begin community engagement on X and GitHub</li>
           <li>
-            Wire up the Inngest AgentKit workflow pipeline for automated content
+            Wire up the durable workflow pipeline for automated content
             generation
           </li>
         </ol>
