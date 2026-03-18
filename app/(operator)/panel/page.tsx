@@ -84,10 +84,26 @@ export default function PanelPage() {
         const data = JSON.parse(e.data);
         if (data.step === "prompt_received") {
           setPhase("retrieving");
+        } else if (data.step === "tools_available") {
+          // Agent has tools ready
+          setPhase("retrieving");
+        } else if (data.step === "tool_call") {
+          // Agent decided to call a tool — show it
+          setSources((prev) => [...prev, {
+            label: `→ ${data.toolName}(${JSON.stringify(data.args).slice(0, 60)})`,
+            type: "api" as const,
+          }]);
+        } else if (data.step === "tool_result") {
+          // Tool returned results — show it
+          setSources((prev) => [...prev, {
+            label: `✓ ${data.toolName}: ${typeof data.result === 'string' ? data.result.slice(0, 80) : JSON.stringify(data.result).slice(0, 80)}...`,
+            type: "doc" as const,
+          }]);
+          setPhase("generating");
         } else if (data.step === "sources_retrieved") {
           setSources(data.sources?.map((s: { label: string; type: string }) => ({
             label: s.label,
-            type: s.type === "public_product" ? "doc" : s.type === "market_intelligence" ? "api" : s.type === "internal_config" ? "code" : "web",
+            type: s.type === "doc" ? "doc" : s.type === "data" ? "api" : "web",
           })) ?? []);
           setPhase("generating");
         } else if (data.step === "reasoning") {
