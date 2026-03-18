@@ -40,7 +40,7 @@ const HARDCODED_ARTICLES: ArticleItem[] = [
     slug: "week-one-experiment-report",
     title: "Week One Experiment: Distribution Channel Test",
     description:
-      "Testing whether DataForSEO-grounded content outperforms generic content on search visibility and engagement metrics.",
+      "Testing whether data-grounded content outperforms generic content on search visibility and engagement metrics.",
     category: "experiment",
     pubDate: "2026-03-15",
   },

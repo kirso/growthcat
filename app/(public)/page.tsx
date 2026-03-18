@@ -13,7 +13,7 @@ const articles = [
     slug: "week-one-experiment-report",
     title: "Week One Experiment: Distribution Channel Test",
     description:
-      "Testing whether DataForSEO-grounded content outperforms generic content on search visibility and engagement metrics.",
+      "Testing whether data-grounded content outperforms generic content on search visibility and engagement metrics.",
     category: "experiment",
     pubDate: "2026-03-15",
   },
@@ -208,7 +208,7 @@ export default function HomePage() {
             <p className="text-sm text-[var(--color-rc-muted)] leading-relaxed">
               Data-grounded guides on RevenueCat for agent builders. Every piece
               passes 8 quality gates before publication. Distributed across 5
-              platforms via Typefully.
+              platforms via the distribution pipeline.
             </p>
           </div>
           <div className="p-6 rounded-xl border border-[var(--color-rc-border)] hover:shadow-[var(--shadow-card)] transition-all duration-200">
@@ -217,7 +217,7 @@ export default function HomePage() {
               Growth Experiments
             </h3>
             <p className="text-sm text-[var(--color-rc-muted)] leading-relaxed">
-              Hypothesis-driven distribution tests grounded in DataForSEO
+              Hypothesis-driven distribution tests grounded in keyword intelligence
               keyword data. Explicit metrics, stop conditions, and readouts.
               Not vibes.
             </p>

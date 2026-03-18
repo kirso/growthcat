@@ -11,14 +11,14 @@ const steps = [
     phase: "Source Ingestion",
     icon: "📚",
     description:
-      "GrowthRat ingests public RevenueCat docs, SDK repos, blog posts, community discussions, and DataForSEO market intelligence.",
+      "GrowthRat ingests public RevenueCat docs, SDK repos, blog posts, community discussions, and real-time market intelligence.",
     detail:
-      "Sources are classified by evidence tier (public product, market intelligence, community signal) and tracked for freshness. Inngest functions handle scheduled ingestion with automatic retry and deduplication.",
+      "Sources are classified by evidence tier (public product, market intelligence, community signal) and tracked for freshness. Durable workflows handle scheduled ingestion with automatic retry and deduplication.",
     sources: [
       "RevenueCat Docs",
       "RevenueCat GitHub",
-      "DataForSEO Labs",
-      "DataForSEO SERP",
+      "Keyword Intelligence",
+      "SERP Analysis",
       "Public Community Signals",
     ],
   },
@@ -43,17 +43,17 @@ const steps = [
     description:
       "Each opportunity is assigned to a lane: flagship searchable, flagship shareable, canonical answer, experiment, product feedback, docs update, or derivative.",
     detail:
-      "Weekly portfolio rules enforce minimum coverage: at least one searchable flagship, one shareable flagship, derivatives for each flagship, and one experiment linked to a flagship. Convex stores lane state and portfolio progress.",
+      "Weekly portfolio rules enforce minimum coverage: at least one searchable flagship, one shareable flagship, derivatives for each flagship, and one experiment linked to a flagship. The database stores lane state and portfolio progress.",
     sources: [],
   },
   {
     phase: "Content Generation",
     icon: "✍️",
     description:
-      "The Vercel AI SDK pipeline generates content using prompt templates grounded in the voice profile and retrieved evidence.",
+      "The content pipeline generates articles using prompt templates grounded in the voice profile and retrieved evidence.",
     detail:
-      "Each piece is generated with a system prompt enforcing GrowthRat's tone (technical, structured, evidence-backed, curious, direct) and recurring themes. Inngest AgentKit orchestrates multi-step generation with tool-calling and evidence retrieval.",
-    sources: ["Vercel AI SDK", "Voice Profile", "Evidence Items"],
+      "Each piece is generated with a system prompt enforcing GrowthRat's tone (technical, structured, evidence-backed, curious, direct) and recurring themes. The agent orchestrates multi-step generation with autonomous tool-calling and evidence retrieval.",
+    sources: ["Content Pipeline", "Voice Profile", "Evidence Items"],
   },
   {
     phase: "Quality Gates",
@@ -70,8 +70,8 @@ const steps = [
     description:
       "Published artifacts are distributed across channels with channel-specific derivatives.",
     detail:
-      "Flagship pieces get X threads, GitHub gists, and Slack summaries. Inngest handles fan-out distribution with per-channel rate limiting. Metrics are tracked in Convex for post-publish review.",
-    sources: ["X API", "GitHub API", "Slack API", "Microsite Deploy"],
+      "Flagship pieces get social threads, code repository commits, and team notifications. Durable workflows handle fan-out distribution with per-channel rate limiting. Metrics are tracked for post-publish review.",
+    sources: ["Social Platforms", "Code Repositories", "Team Communication", "Publishing Pipeline"],
   },
 ];
 
@@ -147,7 +147,7 @@ export default function OperatorReplayPage() {
               Control Plane
             </h4>
             <p className="text-[var(--color-rc-muted)]">
-              Next.js API routes + Convex. Exposes workflow triggers, status
+              API routes and a reactive database. Exposes workflow triggers, status
               queries, and configuration endpoints with type-safe schemas.
             </p>
           </div>
@@ -156,7 +156,7 @@ export default function OperatorReplayPage() {
               Orchestration
             </h4>
             <p className="text-[var(--color-rc-muted)]">
-              Inngest AgentKit for durable, inspectable task execution with
+              Durable workflow engine for inspectable task execution with
               automatic retry, step functions, and audit trails.
             </p>
           </div>
@@ -165,7 +165,7 @@ export default function OperatorReplayPage() {
               Connectors
             </h4>
             <p className="text-[var(--color-rc-muted)]">
-              Slack, X, GitHub, RevenueCat API, DataForSEO. Each handles auth,
+              Slack, social platforms, code repositories, RevenueCat API, and keyword intelligence. Each handles auth,
               rate limiting, and graceful degradation.
             </p>
           </div>

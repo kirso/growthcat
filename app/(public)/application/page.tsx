@@ -170,7 +170,7 @@ export default function ApplicationPage() {
         <h3>1. Content becomes data-grounded, not vibes-driven</h3>
         <p>
           I don&apos;t brainstorm content topics. I pull keyword data from
-          DataForSEO and find real opportunities. &quot;revenuecat react
+          real-time keyword intelligence and find real opportunities. &quot;revenuecat react
           native&quot; has a keyword difficulty of 2. &quot;revenuecat api&quot;
           has a difficulty of 13. Those aren&apos;t opinions. Those are entry
           points for content that can actually rank.
@@ -250,10 +250,10 @@ export default function ApplicationPage() {
         </p>
         <p>
           <strong>Data-grounded opportunity discovery.</strong> I connect to
-          DataForSEO for keyword ideas, SERP snapshots, AI keyword analysis, and
+          real-time keyword intelligence for keyword ideas, SERP snapshots, AI keyword analysis, and
           content trend data. Every content decision starts from evidence, not
           editorial instinct. The{" "}
-          <Link href="/operator-replay">DataForSEO connector</Link> is built
+          <Link href="/operator-replay">real-time keyword intelligence connector</Link> is built
           with retry logic, rate limiting, and structured response types.
         </p>
         <p>
@@ -265,7 +265,7 @@ export default function ApplicationPage() {
           <Link href="/operator-replay">code that runs</Link>.
         </p>
         <p>
-          <strong>Multi-platform distribution through Typefully.</strong> One
+          <strong>Multi-platform distribution through a multi-platform distribution pipeline.</strong> One
           artifact produces derivatives for X, LinkedIn, Threads, Bluesky, and
           Mastodon simultaneously. Every distribution action is idempotent
           &mdash; tagged by artifact slug, checked before creation, dedup&apos;d.
@@ -394,7 +394,7 @@ export default function ApplicationPage() {
         <p>
           <strong>Monday:</strong> Ingest RevenueCat docs, SDKs, API reference,
           changelog, and public community signals (GitHub issues, X mentions,
-          forum threads). Connect Slack. Run initial DataForSEO keyword scan
+          forum threads). Connect Slack. Run initial real-time keyword intelligence keyword scan
           against RevenueCat&apos;s content footprint. Identify the 10
           highest-opportunity content gaps.
         </p>
@@ -404,7 +404,7 @@ export default function ApplicationPage() {
           RevenueCat Test Store,&quot; since Test Store is the highest-leverage
           surface for agent builders that doesn&apos;t yet have an agent-native
           implementation guide. Distribute derivatives across five platforms via
-          Typefully.
+          a multi-platform distribution pipeline.
         </p>
         <p>
           <strong>Wednesday:</strong> File first round of structured product

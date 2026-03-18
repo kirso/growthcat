@@ -26,6 +26,24 @@ export function Chat() {
     }
   }, [messages]);
 
+  // Listen for custom event to open chat from other components
+  useEffect(() => {
+    const handleOpen = () => setExpanded(true);
+    window.addEventListener("openGrowthRatChat", handleOpen);
+    return () => window.removeEventListener("openGrowthRatChat", handleOpen);
+  }, []);
+
+  // Listen for suggested-prompt clicks from landing page
+  useEffect(() => {
+    const handleSendFromPage = (e: Event) => {
+      const prompt = (e as CustomEvent<string>).detail;
+      if (prompt) handleSend(prompt);
+    };
+    window.addEventListener("growthRatSendMessage", handleSendFromPage);
+    return () =>
+      window.removeEventListener("growthRatSendMessage", handleSendFromPage);
+  });
+
   const handleSend = (text: string) => {
     if (!text.trim() || isLoading) return;
     sendMessage({ text: text.trim() });
